@@ -64,11 +64,12 @@ struct AdminSummary: View {
     }
 
     private let services: [Service] = [
-        Service(name: "Modelos (DeepSeek, Qwen, GLM)", status: "Operativo", level: .good),
+        Service(name: "Motores de \(Brand.modelName) (DeepSeek, Qwen, GLM)", status: "Operativo", level: .good),
         Service(name: "Cobros en Tron", status: "Operativo", level: .good),
         Service(name: "Cobros en Base", status: "Lento", level: .warn),
         Service(name: "Cobros en Solana", status: "Operativo", level: .good),
-        Service(name: "Bot de Telegram", status: "Operativo", level: .good),
+        Service(name: "Motor de imágenes", status: "Operativo", level: .good),
+        Service(name: "Motor de video", status: "Operativo", level: .good),
         Service(name: "Copias de seguridad", status: "Hace 2 horas", level: .good)
     ]
 
@@ -304,6 +305,8 @@ struct AdminPlans: View {
     @Environment(AppStore.self) private var store
     @State private var draft = AdminConfig.defaults
     @State private var loaded = false
+    @State private var pay = PaymentSettings.defaults
+    @State private var testing = false
 
     var body: some View {
         Form {
@@ -346,6 +349,55 @@ struct AdminPlans: View {
                 }
             }
 
+            Section {
+                Stepper(value: $draft.creditsCap, in: 0...2000, step: 10) {
+                    limitLabel("Créditos al mes", "\(Fmt.int(draft.creditsCap)) · imagen: 1 · video de 5 s: 5")
+                }
+                LabeledContent("Costo por crédito (USD)") {
+                    TextField("0,021", value: $draft.creditCost, format: .number)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                }
+            } header: {
+                Text("Imágenes y video")
+            } footer: {
+                Text("Lo que te cobra el proveedor por una imagen. Un video de 5 segundos cuesta unas 5 imágenes.")
+            }
+
+            Section {
+                Picker("Tasa para Pago Móvil", selection: $pay.useEuroRate) {
+                    Text("Euro BCV").tag(true)
+                    Text("Dólar BCV").tag(false)
+                }
+                LabeledContent("Tasa euro (Bs por €)") {
+                    TextField("982,76", value: $pay.rateEur, format: .number)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("Tasa dólar (Bs por $)") {
+                    TextField("877,90", value: $pay.rateUsd, format: .number)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                }
+                TextField("Banco para Pago Móvil", text: $pay.mobileBank)
+                TextField("Teléfono", text: $pay.mobilePhone)
+                    .keyboardType(.phonePad)
+                TextField("RIF o cédula", text: $pay.mobileID)
+                TextField("Dirección USDT en Tron", text: $pay.walletTron)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                TextField("Dirección USDC en Base", text: $pay.walletBase)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                TextField("Dirección en Solana (USDT y USDC)", text: $pay.walletSolana)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+            } header: {
+                Text("Cobros")
+            } footer: {
+                Text("Con la tasa del euro el monto en bolívares es mayor que con la del dólar. El servidor actualiza las tasas cada día desde el BCV.")
+            }
+
             Section("Margen") {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -367,16 +419,49 @@ struct AdminPlans: View {
                 LabeledContent("Presupuesto de cómputo", value: Fmt.money(draft.computeBudget))
                 LabeledContent("Tokens que cubre", value: "\(Fmt.decimal(draft.millionTokens)) M")
                 LabeledContent("Uso máximo al mes", value: "\(Fmt.decimal(maxMonthlyMillions)) M")
+                LabeledContent("Texto, peor caso", value: Fmt.money(rounded(draft.maxTextCost)))
+                LabeledContent("Imágenes y video, peor caso", value: Fmt.money(rounded(draft.maxMediaCost)))
+                LabeledContent("Peor caso total", value: "\(Fmt.money(rounded(draft.maxTotalCost))) de \(Fmt.money(rounded(draft.computeBudget)))")
                 HStack {
-                    StatusChip(text: draft.weeklyCapFits ? "El límite semanal cabe en el presupuesto"
-                                                         : "El límite semanal no cabe: bájalo o sube el precio",
-                               level: draft.weeklyCapFits ? .good : .bad)
+                    StatusChip(text: draft.worstCaseFits ? "Cabe en el presupuesto aunque alguien use todo"
+                                                         : "No cabe: baja los créditos o el tope semanal",
+                               level: draft.worstCaseFits ? .good : .bad)
                     Spacer(minLength: 0)
                 }
             } header: {
                 Text("Economía por usuario al mes")
             } footer: {
                 Text("Calculado con DeepSeek V4 Pro a $0,56 por millón de tokens y 2.000 tokens por mensaje.")
+            }
+
+            Section {
+                TextField("https://liminal-api.tu-cuenta.workers.dev", text: serverURLBinding)
+                    .keyboardType(.URL)
+                    .textContentType(.URL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                SecureField("Clave de la app", text: serverKeyBinding)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button {
+                    testing = true
+                    Task {
+                        let message = await store.testServer(address: draft.serverURL ?? "", key: draft.serverKey ?? "")
+                        testing = false
+                        store.show(message)
+                    }
+                } label: {
+                    Label(testing ? "Probando…" : "Probar conexión", systemImage: "bolt")
+                }
+                .disabled(testing)
+            } header: {
+                HStack(spacing: 6) {
+                    Text("Servidor de \(Brand.modelName)")
+                    Spacer()
+                    StatusChip(text: store.serverReady ? "Conectado" : "Demostración", level: store.serverReady ? .good : .warn)
+                }
+            } footer: {
+                Text("La clave de DeepSeek vive solo en tu servidor. Aquí van su dirección y la clave de la app que inventaste al crearlo. Sin servidor, Lithium da respuestas de demostración.")
             }
 
             Section {
@@ -393,22 +478,26 @@ struct AdminPlans: View {
                     .tint(Palette.green)
                 }
             } header: {
-                Text("Motores disponibles")
+                Text("Motores detrás de \(Brand.modelName)")
             } footer: {
-                Text("Tiene que quedar al menos uno encendido.")
+                Text("Tus clientes solo ven \(Brand.modelName). Si el primero se satura, el mensaje pasa al siguiente. Tiene que quedar al menos uno encendido.")
             }
 
             Section {
                 Button {
                     store.saveAdmin(draft)
+                    store.savePaySettings(pay)
                 } label: {
                     Text("Guardar cambios")
                         .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity)
                 }
-                .disabled(!isValid || draft == store.state.admin)
+                .disabled(!isValid || (draft == store.state.admin && pay == store.state.pay))
                 Button("Volver a los valores recomendados") {
+                    let address = draft.serverURL, key = draft.serverKey
                     draft = .defaults
+                    draft.serverURL = address
+                    draft.serverKey = key
                 }
                 .foregroundStyle(Palette.ink2)
             }
@@ -417,14 +506,27 @@ struct AdminPlans: View {
         .onAppear {
             if !loaded {
                 draft = store.state.admin
+                pay = store.state.pay
                 loaded = true
             }
         }
     }
 
+    private func rounded(_ value: Double) -> Double {
+        (value * 100).rounded() / 100
+    }
+
+    private var serverURLBinding: Binding<String> {
+        Binding(get: { draft.serverURL ?? "" }, set: { draft.serverURL = $0 })
+    }
+
+    private var serverKeyBinding: Binding<String> {
+        Binding(get: { draft.serverKey ?? "" }, set: { draft.serverKey = $0 })
+    }
+
     private var pricesValid: Bool { draft.priceMonthly > 0 && draft.priceWeekly > 0 }
     private var capsValid: Bool { draft.weekCap >= draft.advCap }
-    private var isValid: Bool { pricesValid && capsValid && !draft.enabledEngines.isEmpty }
+    private var isValid: Bool { pricesValid && capsValid && !draft.enabledEngines.isEmpty && draft.creditCost >= 0 }
 
     /// Someone who uses the whole weekly limit every week, in millions of tokens.
     private var maxMonthlyMillions: Double {
@@ -486,27 +588,49 @@ struct AdminPayments: View {
                         .foregroundStyle(Palette.ink3)
                 }
                 ForEach(shown) { payment in
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(payment.email)
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(Palette.ink)
-                                .lineLimit(1)
-                            Text("\(payment.plan.name) · \(payment.network.name) · \(Fmt.relative(payment.date))")
-                                .font(.caption)
-                                .foregroundStyle(Palette.ink3)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(payment.email)
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(Palette.ink)
+                                    .lineLimit(1)
+                                Text("\(payment.plan.name) · \(payment.method) · \(Fmt.relative(payment.date))")
+                                    .font(.caption)
+                                    .foregroundStyle(Palette.ink3)
+                                if !payment.reference.isEmpty {
+                                    Text("Referencia \(payment.reference)")
+                                        .font(.caption)
+                                        .monospacedDigit()
+                                        .foregroundStyle(Palette.ink3)
+                                }
+                            }
+                            Spacer(minLength: 8)
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text(payment.amount)
+                                    .font(.subheadline.weight(.semibold))
+                                    .monospacedDigit()
+                                    .foregroundStyle(Palette.ink)
+                                StatusChip(text: payment.status.label, level: payment.status.level)
+                            }
                         }
-                        Spacer(minLength: 8)
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text(payment.amount)
-                                .font(.subheadline.weight(.semibold))
-                                .monospacedDigit()
-                                .foregroundStyle(Palette.ink)
-                            StatusChip(text: payment.status.label, level: payment.status.level)
+                        .accessibilityElement(children: .combine)
+                        if payment.status == .pendiente && !payment.reference.isEmpty {
+                            HStack(spacing: 10) {
+                                Button("Aprobar") {
+                                    store.review(paymentID: payment.id, approve: true)
+                                }
+                                .foregroundStyle(Palette.greenText)
+                                Button("Rechazar") {
+                                    store.review(paymentID: payment.id, approve: false)
+                                }
+                                .foregroundStyle(Palette.redText)
+                            }
+                            .font(.footnote.weight(.semibold))
+                            .buttonStyle(.bordered)
                         }
                     }
                     .padding(.vertical, 2)
-                    .accessibilityElement(children: .combine)
                 }
             }
         }

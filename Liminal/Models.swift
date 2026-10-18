@@ -96,6 +96,12 @@ enum Effort: String, Codable, CaseIterable, Identifiable, Hashable {
     }
 }
 
+/// The one model name customers see. Change it here and it changes everywhere.
+enum Brand {
+    static let modelName = "Lithium 1.1"
+}
+
+/// Engines behind Lithium 1.1. Only the admin sees them.
 enum Engine: String, Codable, CaseIterable, Identifiable, Hashable {
     case deepseek, qwen, glm
     var id: String { rawValue }
@@ -110,10 +116,16 @@ enum Engine: String, Codable, CaseIterable, Identifiable, Hashable {
 
     var note: String {
         switch self {
-        case .deepseek: return "Recomendado. Buen equilibrio entre calidad y velocidad."
-        case .qwen: return "Fuerte en español y en varios idiomas."
-        case .glm: return "Para razonamientos largos y paso a paso."
+        case .deepseek: return "Principal: razonamiento y calidad."
+        case .qwen: return "Respaldo: fuerte en español."
+        case .glm: return "Respaldo: razonamientos largos."
         }
+    }
+
+    /// Engines saved by older versions become DeepSeek.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = Engine(rawValue: raw) ?? .deepseek
     }
 }
 
@@ -209,6 +221,224 @@ enum PaymentStatus: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// Images and videos are paid with monthly credits. One credit costs about $0.02 with the provider.
+enum CreationKind: String, Codable, CaseIterable, Identifiable {
+    case image, video
+    var id: String { rawValue }
+
+    var name: String { self == .image ? "Imagen" : "Video de 5 s" }
+    var icon: String { self == .image ? "photo" : "video" }
+    var credits: Int { self == .image ? 1 : 5 }
+    var creditsText: String { credits == 1 ? "1 crédito" : "\(credits) créditos" }
+    var placeholder: String { self == .image ? "Describe la imagen que quieres crear" : "Describe el video que quieres crear" }
+    var pendingText: String {
+        self == .image ? "Creando tu imagen…" : "Creando tu video de 5 segundos… tarda un poco más que una imagen."
+    }
+    var doneText: String { self == .image ? "Aquí está tu imagen." : "Aquí está tu video de 5 segundos." }
+    /// What the Dynamic Island says while it is being made, and when it is ready.
+    var activityTitle: String { self == .image ? "Creando tu imagen" : "Creando tu video" }
+    var readyTitle: String { self == .image ? "Tu imagen está lista" : "Tu video está listo" }
+    var delayMilliseconds: Int { self == .image ? 2600 : 4800 }
+}
+
+/// Extra credits people can buy when they run out.
+enum ExtraPack {
+    static let credits = 100
+    static let price = 6.0
+}
+
+// MARK: - Files
+
+enum FileKind: String, Codable {
+    case pdf, word, audio, image, text, sheet, other
+
+    var label: String {
+        switch self {
+        case .pdf: return "PDF"
+        case .word: return "Word"
+        case .audio: return "Audio"
+        case .image: return "Imagen"
+        case .text: return "Texto"
+        case .sheet: return "Hoja de cálculo"
+        case .other: return "Archivo"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .pdf: return "doc.richtext"
+        case .word: return "doc.text"
+        case .audio: return "waveform"
+        case .image: return "photo"
+        case .text: return "doc.plaintext"
+        case .sheet: return "tablecells"
+        case .other: return "doc"
+        }
+    }
+}
+
+/// A file attached to a message, with what Lithium could read from it.
+struct Attachment: Codable, Identifiable, Equatable {
+    var id = UUID()
+    var name: String
+    var size: Int
+    var kind: FileKind
+    var pages: Int? = nil
+    var duration: Double? = nil
+    var width: Int? = nil
+    var height: Int? = nil
+    /// JPEG thumbnail for images.
+    var thumbnail: Data? = nil
+    /// Text read from PDFs and text files (up to 8,000 characters).
+    var text: String = ""
+    var isReading = false
+    var failed = false
+
+    var detail: String {
+        if isReading { return "Leyendo…" }
+        if failed { return "No se pudo leer" }
+        switch kind {
+        case .pdf:
+            if let pages { return pages == 1 ? "PDF · 1 página" : "PDF · \(pages) páginas" }
+        case .audio:
+            if let duration, duration > 0 { return "Audio · \(Attachment.clock(duration))" }
+        case .image:
+            if let width, let height { return "Imagen · \(width)×\(height)" }
+        default:
+            break
+        }
+        return size > 0 ? "\(kind.label) · \(AppStore.sizeText(size))" : kind.label
+    }
+
+    static func clock(_ seconds: Double) -> String {
+        let total = Int(seconds.rounded())
+        return "\(total / 60):" + String(format: "%02d", total % 60)
+    }
+}
+
+// MARK: - Memory, connectors and payments
+
+enum MemoryCategory: String, Codable, CaseIterable, Identifiable {
+    case perfil, negocio, preferencias
+    var id: String { rawValue }
+    var name: String {
+        switch self {
+        case .perfil: return "Sobre ti"
+        case .negocio: return "Tu negocio"
+        case .preferencias: return "Cómo te gusta que responda"
+        }
+    }
+}
+
+/// Apps Lithium can work with through MCP.
+enum ConnectorKind: String, Codable, CaseIterable, Identifiable {
+    case drive, gmail, calendar, notion, whatsapp, instagram
+    var id: String { rawValue }
+
+    var name: String {
+        switch self {
+        case .drive: return "Google Drive"
+        case .gmail: return "Gmail"
+        case .calendar: return "Google Calendar"
+        case .notion: return "Notion"
+        case .whatsapp: return "WhatsApp Business"
+        case .instagram: return "Instagram"
+        }
+    }
+
+    var note: String {
+        switch self {
+        case .drive: return "Busca y lee tus documentos."
+        case .gmail: return "Resume y redacta correos."
+        case .calendar: return "Crea eventos y recordatorios."
+        case .notion: return "Consulta y edita tus páginas."
+        case .whatsapp: return "Responde a tus clientes desde Lithium."
+        case .instagram: return "Programa publicaciones y lee mensajes."
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .drive: return "externaldrive"
+        case .gmail: return "envelope"
+        case .calendar: return "calendar"
+        case .notion: return "book.closed"
+        case .whatsapp: return "message"
+        case .instagram: return "camera"
+        }
+    }
+}
+
+/// A person's own MCP server, for example their inventory system.
+struct CustomConnector: Codable, Identifiable, Equatable {
+    var id = UUID()
+    var name: String
+    var url: String
+}
+
+enum PayMethod: String, CaseIterable, Identifiable {
+    case pagoMovil, usdt, usdc, card
+    var id: String { rawValue }
+    var name: String {
+        switch self {
+        case .pagoMovil: return "Pago Móvil"
+        case .usdt: return "USDT"
+        case .usdc: return "USDC"
+        case .card: return "Tarjeta"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .pagoMovil: return "iphone"
+        case .usdt, .usdc: return "dollarsign.circle"
+        case .card: return "creditcard"
+        }
+    }
+    /// Networks each stablecoin can be sent on.
+    var networks: [Network] {
+        switch self {
+        case .usdt: return [.tron, .solana]
+        case .usdc: return [.base, .solana]
+        default: return []
+        }
+    }
+}
+
+/// How Liminal gets paid. The server updates the BCV rates every day.
+struct PaymentSettings: Codable, Equatable {
+    var rateEur: Double
+    var rateUsd: Double
+    var rateDate: Date
+    /// Pago Móvil uses the euro rate when true, the dollar rate when false.
+    var useEuroRate: Bool
+    var mobileBank: String
+    var mobilePhone: String
+    var mobileID: String
+    var walletTron: String
+    var walletBase: String
+    var walletSolana: String
+
+    static var defaults: PaymentSettings {
+        var parts = DateComponents()
+        parts.year = 2026
+        parts.month = 10
+        parts.day = 14
+        return PaymentSettings(rateEur: 982.76, rateUsd: 877.90, rateDate: Calendar.current.date(from: parts) ?? Date(),
+                               useEuroRate: true, mobileBank: "0102 · Banco de Venezuela", mobilePhone: "0414-000-0000",
+                               mobileID: "J-00000000-0", walletTron: "", walletBase: "", walletSolana: "")
+    }
+
+    var rate: Double { useEuroRate ? rateEur : rateUsd }
+
+    func wallet(for network: Network) -> String {
+        switch network {
+        case .tron: return walletTron
+        case .base: return walletBase
+        case .solana: return walletSolana
+        }
+    }
+}
+
 enum Role: String, Codable { case user, bot }
 enum Feedback: String, Codable { case up, down }
 
@@ -233,15 +463,40 @@ struct Message: Codable, Identifiable, Equatable {
     var mode: ChatMode
     var thinkingSeconds: Int
     var thought: [String]
-    var files: [String]
+    var files: [Attachment]
     var feedback: Feedback?
+    var searchedWeb: Bool
+    var sources: [String]
+    /// A memory saved from this message, shown with an undo button.
+    var savedMemory: Memory?
+    var edited: Bool
+    var isReading: Bool
     var stopped: Bool
+    /// Set when the answer is a created image or video.
+    var kind: CreationKind?
+    var prompt: String?
+    var seed: UInt32?
     var isPending: Bool
     var isStreaming: Bool
     var date: Date
+    /// Said out loud in a live conversation.
+    var spoken: Bool? = nil
+    /// The slash command used to write this message (for example "pagina").
+    var command: String? = nil
+    /// The answer's id on the server: it keeps running there if the app closes.
+    var jobID: String? = nil
+    /// Text written before this job started (an answer continued after a permission question).
+    var jobBase: String? = nil
+    /// Searches and pages Lithium used, and the pages it cites.
+    var tools: [ToolStep]? = nil
+    var links: [SourceLink]? = nil
+    /// Lithium waits for permission to search or open a site.
+    var ask: AskRequest? = nil
+    /// For example: the answer was cut because it was too long.
+    var notice: String? = nil
 
     init(role: Role, text: String, tier: Tier = .fast, effort: Effort = .medio, engine: Engine = .deepseek,
-         mode: ChatMode = .general, thinkingSeconds: Int = 0, thought: [String] = [], files: [String] = []) {
+         mode: ChatMode = .general, thinkingSeconds: Int = 0, thought: [String] = [], files: [Attachment] = []) {
         self.id = UUID()
         self.role = role
         self.text = text
@@ -253,7 +508,15 @@ struct Message: Codable, Identifiable, Equatable {
         self.thought = thought
         self.files = files
         self.feedback = nil
+        self.searchedWeb = false
+        self.sources = []
+        self.savedMemory = nil
+        self.edited = false
+        self.isReading = false
         self.stopped = false
+        self.kind = nil
+        self.prompt = nil
+        self.seed = nil
         self.isPending = false
         self.isStreaming = false
         self.date = Date()
@@ -309,6 +572,7 @@ struct Folder: Codable, Identifiable, Equatable {
 struct Memory: Codable, Identifiable, Equatable {
     var id = UUID()
     var text: String
+    var category: MemoryCategory = .perfil
 }
 
 struct PointsEntry: Codable, Identifiable, Equatable {
@@ -330,6 +594,14 @@ struct Usage: Codable, Equatable {
     var fastDay: String
     var resetAt: Date
     var weekResetAt: Date
+    var credits: Int
+    var creditsCap: Int
+    var creditsResetAt: Date
+    // Usage measured in tokens (dollars of compute), shared by the chat and Liminal Dev.
+    var sessionUSD: Double? = nil
+    var sessionResetAt: Date? = nil
+    var weekUSD: Double? = nil
+    var weekTokens: Int? = nil
 }
 
 struct Prefs: Codable, Equatable {
@@ -349,6 +621,51 @@ struct Prefs: Codable, Equatable {
     var memory: Bool
     var network: Network
     var plan: PlanKind
+    /// Show Lithium's progress in the Dynamic Island and on the Lock Screen. `nil` means on.
+    var liveActivities: Bool? = nil
+    /// How fast Lithium speaks in a live conversation. `nil` means normal.
+    var voiceSpeed: VoiceSpeed? = nil
+    /// Before entering a site Lithium asks (`nil`), goes ahead, or does not browse.
+    var browse: BrowseMode? = nil
+    /// Search without asking first.
+    var allowSearch: Bool? = nil
+    /// Sites Lithium can open without asking.
+    var allowedHosts: [String]? = nil
+    /// Notify when an answer finishes while the app is closed. `nil` means on.
+    var notify: Bool? = nil
+    /// The country chosen for paying; `nil` means detected.
+    var region: String? = nil
+}
+
+/// How fast Lithium speaks in a live conversation.
+enum VoiceSpeed: String, Codable, CaseIterable, Identifiable {
+    case calmada, normal, rapida
+    var id: String { rawValue }
+
+    var name: String {
+        switch self {
+        case .calmada: return "Calmada"
+        case .normal: return "Normal"
+        case .rapida: return "Rápida"
+        }
+    }
+
+    /// Speech rate for AVSpeechUtterance, where 0.5 is the iPhone's normal speed.
+    var rate: Float {
+        switch self {
+        case .calmada: return 0.44
+        case .normal: return 0.5
+        case .rapida: return 0.56
+        }
+    }
+}
+
+/// What Lithium says in a live conversation, and whether the conversation ends after it.
+struct VoiceAnswer: Equatable {
+    var text: String
+    var ends: Bool = false
+    /// A demo answer that the server should replace when it is connected.
+    var generic: Bool = false
 }
 
 struct AdminConfig: Codable, Equatable {
@@ -359,17 +676,34 @@ struct AdminConfig: Codable, Equatable {
     var fastCap: Int
     var margin: Double
     var enabledEngines: Set<Engine>
+    /// Image and video credits per month, and what one credit costs with the provider.
+    var creditsCap: Int
+    var creditCost: Double
+    /// The Lithium server: its address and the app key chosen when it was created. Empty means demo answers.
+    var serverURL: String? = nil
+    var serverKey: String? = nil
+    /// The web app on GitHub Pages, where Liminal Dev runs.
+    var webAppURL: String? = nil
 
     static let defaults = AdminConfig(priceMonthly: 11, priceWeekly: 3, advCap: 65, weekCap: 450, fastCap: 200,
-                                      margin: 60, enabledEngines: Set(Engine.allCases))
+                                      margin: 60, enabledEngines: Set(Engine.allCases), creditsCap: 100, creditCost: 0.021)
 
-    /// Dollars per million tokens for DeepSeek V4 Pro, mixing input and output.
-    static let costPerMillionTokens = 0.56
+    /// Dollars per million tokens for DeepSeek V4 Pro since 16 August 2026,
+    /// with 60% of the input cached and 85% of use off-peak in Venezuela.
+    static let costPerMillionTokens = 0.91
 
     var computeBudget: Double { max(0, priceMonthly * (1 - margin / 100)) }
     var millionTokens: Double { computeBudget / Self.costPerMillionTokens }
     /// True when someone using the whole weekly cap still fits the budget (2,000 tokens per message).
     var weeklyCapFits: Bool { Double(weekCap * 4 * 2000) / 1_000_000 <= millionTokens }
+
+    /// Text cost if someone uses the whole weekly limit every week.
+    var maxTextCost: Double { Double(weekCap * 4 * 2000) / 1_000_000 * Self.costPerMillionTokens }
+    /// Image and video cost if someone uses all their credits.
+    var maxMediaCost: Double { Double(creditsCap) * creditCost }
+    var maxTotalCost: Double { maxTextCost + maxMediaCost }
+    /// True when even a subscriber who uses everything stays within the budget.
+    var worstCaseFits: Bool { maxTotalCost <= computeBudget + 0.000_001 }
 }
 
 struct AdminUser: Codable, Identifiable, Equatable {
@@ -390,8 +724,10 @@ struct Payment: Codable, Identifiable, Equatable {
     var email: String
     var plan: PlanKind
     var amount: String
-    var network: Network
+    /// For example "USDT · Tron" or "Pago Móvil · Banesco".
+    var method: String
     var status: PaymentStatus
+    var reference: String = ""
 }
 
 struct AppState: Codable, Equatable {
@@ -409,5 +745,7 @@ struct AppState: Codable, Equatable {
     var users: [AdminUser]
     var payments: [Payment]
     var paidUntil: Date
-    var telegramLinked: Bool
+    var connectors: Set<ConnectorKind>
+    var customConnectors: [CustomConnector]
+    var pay: PaymentSettings
 }

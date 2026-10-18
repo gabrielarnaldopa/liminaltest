@@ -52,6 +52,11 @@ enum Palette {
     // Readable text versions of the traffic lights
     static let redText = Color.dynamic(light: 0xC4302B, dark: 0xFF7B74)
     static let yellowText = Color.dynamic(light: 0x8A5A00, dark: 0xFEBC2E)
+    /// Code blocks stay dark in both themes, like a terminal.
+    static let codeBg = Color.dynamic(light: 0x1C1C1E, dark: 0x111113)
+    static let codeHead = Color.dynamic(light: 0x2C2C2E, dark: 0x1F1F22)
+    static let codeInk = Color.dynamic(light: 0xE5E5EA, dark: 0xE5E5EA)
+    static let codeMuted = Color.dynamic(light: 0x98989D, dark: 0x98989D)
     static let greenText = Color.dynamic(light: 0x1A7F2E, dark: 0x4BD865)
 
     // Soft backgrounds

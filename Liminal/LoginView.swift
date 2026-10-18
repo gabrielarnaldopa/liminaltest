@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 
 struct LoginView: View {
     @Environment(AuthService.self) private var auth
@@ -11,6 +12,7 @@ struct LoginView: View {
     @State private var error: AuthService.LoginError? = nil
     @State private var secondsLeft = 0
     @FocusState private var focus: AuthService.Field?
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ScrollView {
@@ -31,6 +33,45 @@ struct LoginView: View {
                 VStack(alignment: .leading, spacing: 0) {
                     TrafficLights()
                         .padding(.bottom, 18)
+
+                    // Apple's official button. It needs the paid developer account and the server to work.
+                    SignInWithAppleButton(.continue) { request in
+                        request.requestedScopes = [.fullName, .email]
+                    } onCompletion: { result in
+                        switch result {
+                        case .success:
+                            store.show("Demostración: con el servidor conectado, aquí se crea o se abre tu cuenta.")
+                        case .failure:
+                            store.show("Entrar con Apple necesita la cuenta de desarrollador de Apple y el servidor de Liminal.")
+                        }
+                    }
+                    .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                    .frame(height: 46)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .padding(.bottom, 10)
+
+                    Button {
+                        store.show("Demostración: con el servidor conectado se abre Google y entras sin contraseña.")
+                    } label: {
+                        Label("Continuar con Google", systemImage: "globe")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Palette.ink)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 46)
+                            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Palette.line2, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 16)
+
+                    HStack(spacing: 10) {
+                        Rectangle().fill(Palette.line).frame(height: 1)
+                        Text("o con tu correo")
+                            .font(.caption)
+                            .foregroundStyle(Palette.ink3)
+                            .fixedSize()
+                        Rectangle().fill(Palette.line).frame(height: 1)
+                    }
+                    .padding(.bottom, 16)
 
                     fieldLabel("Correo")
                     TextField("tu@correo.com", text: $email)

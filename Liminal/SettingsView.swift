@@ -35,13 +35,16 @@ struct SettingsView: View {
                     settingsLink("General", icon: "gearshape") { GeneralSettings() }
                     settingsLink("Apariencia", icon: "circle.lefthalf.filled") { AppearanceSettings() }
                     settingsLink("Modelos y modos", icon: "cpu") { ModelSettings() }
+                    settingsLink("Navegación", icon: "globe") { NavigationSettings() }
+                    settingsLink("Voz e Isla Dinámica", icon: "waveform") { VoiceSettings() }
+                    settingsLink("Memoria", icon: "brain") { MemorySettings() }
+                    settingsLink("Conectores", icon: "puzzlepiece.extension") { ConnectorsSettings() }
                     settingsLink("Privacidad", icon: "lock") { PrivacySettings() }
                 }
 
                 Section {
                     settingsLink("Plan y pagos", icon: "creditcard") { PlanSettings() }
                     settingsLink("Puntos de fundador", icon: "star") { PointsSettings() }
-                    settingsLink("Telegram", icon: "paperplane") { TelegramSettings() }
                 }
 
                 Section {
@@ -134,6 +137,72 @@ struct GeneralSettings: View {
         case .profesional: return "Formal y ordenado, para trabajo y estudios."
         case .directo: return "Respuestas cortas, sin rodeos."
         }
+    }
+}
+
+// MARK: - Voice and Dynamic Island
+
+struct VoiceSettings: View {
+    @Environment(AppStore.self) private var store
+
+    var body: some View {
+        @Bindable var store = store
+        Form {
+            Section {
+                Picker("Velocidad de la voz", selection: $store.voiceSpeed) {
+                    ForEach(VoiceSpeed.allCases) { speed in
+                        Text(speed.name).tag(speed)
+                    }
+                }
+                .pickerStyle(.segmented)
+            } header: {
+                Text("Conversación en vivo")
+            } footer: {
+                Text("Con el chat vacío, toca el botón de ondas y habla. Cuando haces una pausa, Lithium responde en voz alta; tócalo para interrumpirlo. Cada respuesta cuenta como un mensaje de tu plan: escuchar y hablar no gastan nada más.")
+            }
+
+            Section {
+                Toggle("Mostrar el avance de Lithium", isOn: $store.liveActivitiesOn)
+                    .tint(Palette.green)
+            } header: {
+                Text("Isla Dinámica y pantalla bloqueada")
+            } footer: {
+                Text(liveFooter)
+            }
+
+            Section {
+                Toggle("Avisarme cuando termine una respuesta", isOn: Binding(get: { store.state.prefs.notify ?? true }, set: { on in
+                    store.state.prefs.notify = on
+                    if on { Task { await Notifier.requestIfNeeded() } }
+                }))
+                .tint(Palette.green)
+            } header: {
+                Text("Con la app cerrada")
+            } footer: {
+                Text("Con el servidor nuevo, Lithium sigue escribiendo aunque cierres la app, y te avisa cuando termina o cuando necesita tu permiso para entrar a un sitio.")
+            }
+
+            Section("Privacidad de tu voz") {
+                Label {
+                    Text("Si tu iPhone lo permite, tu voz se convierte en texto dentro del teléfono y el audio no sale de él: lo verás con un candado durante la conversación. Si no, se usa el dictado del iPhone. Lithium solo recibe el texto.")
+                        .font(.footnote)
+                        .foregroundStyle(Palette.ink2)
+                } icon: {
+                    Image(systemName: "lock.fill")
+                        .foregroundStyle(Palette.ink3)
+                }
+            }
+        }
+        .liminalList()
+        .navigationTitle("Voz e Isla Dinámica")
+    }
+
+    private var liveFooter: String {
+        var text = "Ves cuándo está lista una imagen, un video o una respuesta larga, y pausas o terminas la conversación en vivo sin abrir la app. En iPhone con Isla Dinámica (14 Pro y más nuevos) aparece arriba; en los demás, en la pantalla bloqueada."
+        if store.liveActivitiesOn && !LiveActivityController.shared.systemAllows {
+            text += " Ahora están apagadas en Ajustes del iPhone › Liminal › Actividades en vivo."
+        }
+        return text
     }
 }
 
@@ -245,20 +314,10 @@ struct ModelSettings: View {
                 }
             }
 
-            Section("Motor") {
-                Picker("Motor", selection: $store.state.prefs.engine) {
-                    ForEach(store.enabledEngines) { engine in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(engine.name)
-                            Text(engine.note)
-                                .font(.footnote)
-                                .foregroundStyle(Palette.ink3)
-                        }
-                        .tag(engine)
-                    }
-                }
-                .pickerStyle(.inline)
-                .labelsHidden()
+            Section {
+                LabeledContent("Modelo", value: Brand.modelName)
+            } footer: {
+                Text("\(Brand.modelName) combina varios motores abiertos y elige el mejor para cada mensaje. Si uno se satura, pasa al siguiente sin que lo notes.")
             }
 
             Section {
@@ -300,28 +359,19 @@ struct PrivacySettings: View {
                 Text("Los chats temporales no se guardan y desaparecen al salir de ellos.")
             }
 
-            Section {
-                Toggle("Usar memoria", isOn: $store.state.prefs.memory)
-                    .tint(Palette.green)
-                if store.state.prefs.memory {
-                    if store.state.memories.isEmpty {
-                        Text("Todavía no hay recuerdos.")
-                            .foregroundStyle(Palette.ink3)
-                    }
-                    ForEach(store.state.memories) { memory in
-                        Text(memory.text)
-                            .font(.subheadline)
-                            .foregroundStyle(Palette.ink)
-                    }
-                    .onDelete { offsets in
-                        store.state.memories.remove(atOffsets: offsets)
-                        store.show("Recuerdo borrado")
-                    }
+            Section("Memoria") {
+                NavigationLink {
+                    MemorySettings()
+                } label: {
+                    LabeledContent("Memoria", value: store.state.prefs.memory
+                                   ? "Activa · \(store.state.memories.count) datos" : "Apagada")
                 }
-            } header: {
-                Text("Memoria")
-            } footer: {
-                Text("Liminal recuerda estos datos para responderte mejor. Desliza a la izquierda para borrar uno.")
+            }
+
+            Section("Dónde se procesan tus mensajes") {
+                Text("\(Brand.modelName) funciona en servidores de proveedores contratados por Liminal.")
+                    .font(.footnote)
+                    .foregroundStyle(Palette.ink2)
             }
 
             Section("Tus datos") {
@@ -369,6 +419,7 @@ struct PrivacySettings: View {
 struct PlanSettings: View {
     @Environment(AppStore.self) private var store
     @Environment(AuthService.self) private var auth
+    @State private var showPayment = false
 
     var body: some View {
         @Bindable var store = store
@@ -391,12 +442,20 @@ struct PlanSettings: View {
             }
 
             Section("Tu uso") {
-                UsageMeter(title: "Avanzado, ventana de 5 h", used: usage.adv, cap: usage.advCap,
-                           detail: "Se recarga \(Fmt.relative(usage.resetAt))")
-                UsageMeter(title: "Avanzado, esta semana", used: usage.week, cap: usage.weekCap,
-                           detail: "Se recarga \(Fmt.relative(usage.weekResetAt))")
-                UsageMeter(title: "Rápido, hoy", used: usage.fast, cap: usage.fastCap,
-                           detail: "Se recarga a medianoche")
+                PercentMeter(title: "Sesión actual · 5 horas", percent: store.sessionPercent,
+                             detail: (usage.sessionUSD ?? 0) > 0 ? "Se recarga \(Fmt.relative(usage.sessionResetAt ?? Date()))" : "Empieza con tu primer mensaje")
+                PercentMeter(title: "Esta semana", percent: store.weekPercent,
+                             detail: "Se recarga \(Fmt.relative(usage.weekResetAt)) · \(Fmt.tokens(usage.weekTokens ?? 0)) tokens")
+                Text("Una sola medida para todo tu plan: el chat y Liminal Dev comparten la sesión y la semana. Se mide en tokens; el modo rápido gasta unas diez veces menos y sigue disponible aunque se acabe la sesión.")
+                    .font(.caption).foregroundStyle(Palette.ink3)
+                UsageMeter(title: "Créditos para imágenes y video", used: usage.credits, cap: usage.creditsCap,
+                           detail: "Imagen: 1 crédito · Video de 5 s: 5 créditos · Se renuevan el \(Fmt.day(usage.creditsResetAt))")
+                Button {
+                    store.show("Demostración: aquí pagarías \(Fmt.money(ExtraPack.price)) en USDT o USDC y se sumarían \(ExtraPack.credits) créditos.")
+                } label: {
+                    LabeledContent("Paquete de \(ExtraPack.credits) créditos", value: Fmt.money(ExtraPack.price))
+                        .foregroundStyle(Palette.ink)
+                }
             }
 
             Section {
@@ -405,21 +464,19 @@ struct PlanSettings: View {
                         Text("\(plan.name) · \(price(for: plan))").tag(plan)
                     }
                 }
-                Picker("Red de pago", selection: $store.state.prefs.network) {
-                    ForEach(Network.allCases) { network in
-                        Text(network.name).tag(network)
-                    }
-                }
                 Button {
-                    store.show("La dirección de pago aparece aquí cuando conectemos el servidor.")
+                    showPayment = true
                 } label: {
-                    Label("Renovar con USDT o USDC", systemImage: "arrow.triangle.2.circlepath")
+                    Label("Pagar \(Fmt.money(store.planPrice))", systemImage: "creditcard")
+                        .fontWeight(.semibold)
                         .foregroundStyle(Palette.ink)
                 }
             } header: {
-                Text("Renovar")
+                Text("Pagar")
             } footer: {
-                Text("Sin tarjeta y sin datos bancarios. El plan se activa cuando la red confirma el pago.")
+                Text(store.paymentRegion == "VE"
+                     ? "Pago Móvil en bolívares a la tasa oficial del \(store.state.pay.useEuroRate ? "euro" : "dólar") (\(Fmt.bolivares(store.amountInBolivares)) hoy), USDT, USDC o tarjeta."
+                     : "Tarjeta de débito o crédito, USDT o USDC.")
             }
 
             Section("Historial de pagos") {
@@ -432,7 +489,7 @@ struct PlanSettings: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(payment.amount)
                                 .foregroundStyle(Palette.ink)
-                            Text("\(Fmt.day(payment.date)) · \(payment.network.name)")
+                            Text("\(Fmt.day(payment.date)) · \(payment.method)")
                                 .font(.caption)
                                 .foregroundStyle(Palette.ink3)
                         }
@@ -444,6 +501,9 @@ struct PlanSettings: View {
         }
         .liminalList()
         .navigationTitle("Plan y pagos")
+        .sheet(isPresented: $showPayment) {
+            PaymentSheet()
+        }
     }
 
     private var myPayments: [Payment] {
@@ -528,66 +588,6 @@ struct PointsSettings: View {
     }
 }
 
-// MARK: - Telegram
-
-struct TelegramSettings: View {
-    @Environment(AppStore.self) private var store
-
-    var body: some View {
-        let linked = store.state.telegramLinked
-        Form {
-            Section {
-                HStack {
-                    Text("Estado")
-                        .foregroundStyle(Palette.ink)
-                    Spacer()
-                    StatusChip(text: linked ? "Conectado" : "Sin conectar", level: linked ? .good : .warn)
-                }
-            } footer: {
-                Text("Usa Liminal desde Telegram con el mismo plan y los mismos límites.")
-            }
-
-            Section {
-                if linked {
-                    Button {
-                        store.state.telegramLinked = false
-                        store.show("Telegram desconectado")
-                    } label: {
-                        Text("Desconectar Telegram")
-                            .foregroundStyle(Palette.redText)
-                    }
-                } else {
-                    Button {
-                        store.state.telegramLinked = true
-                        store.show("Telegram conectado")
-                    } label: {
-                        Label("Conectar con Telegram", systemImage: "paperplane")
-                            .foregroundStyle(Palette.ink)
-                    }
-                }
-            }
-
-            Section("Cómo funciona") {
-                step(1, "Toca Conectar y abre el bot de Liminal.")
-                step(2, "Envía el código que te mostramos.")
-                step(3, "Escríbele al bot como en la app.")
-            }
-        }
-        .liminalList()
-        .navigationTitle("Telegram")
-    }
-
-    private func step(_ number: Int, _ text: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Text("\(number).")
-                .monospacedDigit()
-                .foregroundStyle(Palette.ink3)
-            Text(text)
-                .foregroundStyle(Palette.ink)
-        }
-    }
-}
-
 // MARK: - Account
 
 struct AccountSettings: View {
@@ -611,6 +611,8 @@ struct AccountSettings: View {
                     LabeledContent("Sesión activa hasta", value: Fmt.dayTime(session.expires))
                 }
             }
+
+            DevicesSection()
 
             Section {
                 Button {
@@ -646,7 +648,10 @@ struct AccountSettings: View {
             Button("Cerrar sesión", role: .destructive) {
                 store.stop()
                 store.saveNow()
-                auth.signOut()
+                Task {
+                    await store.forgetDevice()
+                    auth.signOut()
+                }
             }
             Button("Cancelar", role: .cancel) {}
         }
@@ -655,6 +660,370 @@ struct AccountSettings: View {
             Button("Cancelar", role: .cancel) {}
         } message: {
             Text("No se puede deshacer.")
+        }
+    }
+}
+
+// MARK: - Memory
+
+struct MemorySettings: View {
+    @Environment(AppStore.self) private var store
+    @State private var newText = ""
+    @State private var newCategory: MemoryCategory = .perfil
+    @State private var editingID: UUID? = nil
+    @State private var editText = ""
+    @State private var showEdit = false
+    @State private var confirmForget = false
+
+    var body: some View {
+        @Bindable var store = store
+        Form {
+            Section {
+                Toggle("Usar memoria", isOn: $store.state.prefs.memory)
+                    .tint(Palette.green)
+            } footer: {
+                Text("Lithium recuerda lo importante entre chats: tu nombre, tu negocio y cómo te gusta que responda. También puedes decirle «recuerda que…».")
+            }
+
+            Section("Agregar un recuerdo") {
+                TextField("Por ejemplo: mi tienda se llama Cami", text: $newText, axis: .vertical)
+                    .lineLimit(1...3)
+                Picker("Tipo", selection: $newCategory) {
+                    ForEach(MemoryCategory.allCases) { category in
+                        Text(category.name).tag(category)
+                    }
+                }
+                Button("Agregar") {
+                    store.addMemory(newText, category: newCategory)
+                    newText = ""
+                }
+                .disabled(newText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+
+            ForEach(MemoryCategory.allCases) { category in
+                Section(category.name) {
+                    let items = store.state.memories.filter { $0.category == category }
+                    if items.isEmpty {
+                        Text("Nada todavía.")
+                            .foregroundStyle(Palette.ink3)
+                    }
+                    ForEach(items) { memory in
+                        Button {
+                            editingID = memory.id
+                            editText = memory.text
+                            showEdit = true
+                        } label: {
+                            Text(memory.text)
+                                .foregroundStyle(Palette.ink)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button {
+                                store.deleteMemory(memory.id)
+                            } label: {
+                                Label("Olvidar", systemImage: "trash")
+                            }
+                            .tint(Palette.red)
+                        }
+                    }
+                }
+            }
+
+            Section {
+                Button {
+                    confirmForget = true
+                } label: {
+                    Text("Olvidar todo")
+                        .foregroundStyle(Palette.redText)
+                }
+                .disabled(store.state.memories.isEmpty)
+            } footer: {
+                Text("Toca un recuerdo para editarlo o deslízalo para olvidarlo.")
+            }
+        }
+        .liminalList()
+        .navigationTitle("Memoria")
+        .alert("Editar recuerdo", isPresented: $showEdit) {
+            TextField("Recuerdo", text: $editText)
+            Button("Cancelar", role: .cancel) {}
+            Button("Guardar") {
+                if let editingID { store.updateMemory(editingID, text: editText) }
+            }
+        }
+        .confirmationDialog("¿Olvidar todo?", isPresented: $confirmForget, titleVisibility: .visible) {
+            Button("Olvidar todo", role: .destructive) { store.forgetAll() }
+            Button("Cancelar", role: .cancel) {}
+        } message: {
+            Text("Lithium borra todos sus recuerdos sobre ti. Tus chats no se tocan.")
+        }
+    }
+}
+
+// MARK: - Connectors
+
+struct ConnectorsSettings: View {
+    @Environment(AppStore.self) private var store
+    @State private var name = ""
+    @State private var url = ""
+
+    var body: some View {
+        Form {
+            Section {
+                ForEach(ConnectorKind.allCases) { kind in
+                    HStack(spacing: 12) {
+                        Image(systemName: kind.icon)
+                            .foregroundStyle(Palette.ink2)
+                            .frame(width: 34, height: 34)
+                            .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(kind.name)
+                                .foregroundStyle(Palette.ink)
+                            Text(kind.note)
+                                .font(.caption)
+                                .foregroundStyle(Palette.ink3)
+                        }
+                        Spacer(minLength: 8)
+                        Button(store.state.connectors.contains(kind) ? "Desconectar" : "Conectar") {
+                            store.toggleConnector(kind)
+                        }
+                        .buttonStyle(.bordered)
+                        .font(.footnote)
+                    }
+                }
+            } footer: {
+                Text("Los conectores usan MCP, el estándar abierto para que la IA trabaje con tus apps. Con el servidor conectado, al tocar Conectar se abre la autorización de cada servicio.")
+            }
+
+            Section {
+                ForEach(store.state.customConnectors) { connector in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(connector.name)
+                            .foregroundStyle(Palette.ink)
+                        Text(connector.url)
+                            .font(.caption)
+                            .foregroundStyle(Palette.ink3)
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button {
+                            store.removeCustomConnector(connector.id)
+                        } label: {
+                            Label("Quitar", systemImage: "trash")
+                        }
+                        .tint(Palette.red)
+                    }
+                }
+                TextField("Nombre, por ejemplo: Mi inventario", text: $name)
+                TextField("https://tu-servidor.com/mcp", text: $url)
+                    .keyboardType(.URL)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button("Agregar servidor") {
+                    if let problem = store.addCustomConnector(name: name, url: url) {
+                        store.show(problem)
+                    } else {
+                        name = ""
+                        url = ""
+                    }
+                }
+            } header: {
+                Text("Servidor MCP personalizado")
+            } footer: {
+                Text("Para conectar Lithium con tu inventario, tu tienda o cualquier sistema propio.")
+            }
+        }
+        .liminalList()
+        .navigationTitle("Conectores")
+    }
+}
+
+// MARK: - Payment
+
+struct PaymentSheet: View {
+    @Environment(AppStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    @State private var method: PayMethod = .pagoMovil
+    @State private var region = "VE"
+    @State private var network: Network = .tron
+    @State private var reference = ""
+    @State private var bank = "Banco de Venezuela"
+    @State private var hash = ""
+
+    private let banks = ["Banco de Venezuela", "Banesco", "Mercantil", "BBVA Provincial", "BNC", "Bancamiga",
+                         "Banco del Tesoro", "Bicentenario", "Banplus", "Otro"]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("País o región", selection: $region) {
+                        ForEach(Region.all) { country in
+                            Text(country.name).tag(country.code)
+                        }
+                    }
+                    Picker("Método", selection: $method) {
+                        ForEach(Region.methods(for: region)) { method in
+                            Text(method.name).tag(method)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                } footer: {
+                    Text(store.state.prefs.region == nil ? "Lo elegimos por tu zona horaria. Cámbialo si no es tu país." : "Los métodos de pago cambian según el país.")
+                }
+                switch method {
+                case .pagoMovil: pagoMovil
+                case .usdt, .usdc: crypto
+                case .card: card
+                }
+            }
+            .liminalList()
+            .navigationTitle("Pagar tu plan")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cerrar") { dismiss() }
+                }
+            }
+            .onChange(of: method) { _, newMethod in
+                if let first = newMethod.networks.first { network = first }
+            }
+            .onAppear {
+                region = store.paymentRegion
+                method = Region.methods(for: region)[0]
+            }
+            .onChange(of: region) { _, newRegion in
+                if newRegion != store.paymentRegion { store.state.prefs.region = newRegion }
+                let allowed = Region.methods(for: newRegion)
+                if !allowed.contains(method) { method = allowed[0] }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var pagoMovil: some View {
+        let pay = store.state.pay
+        Section {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Monto a pagar")
+                    .font(.caption)
+                    .foregroundStyle(Palette.ink3)
+                Text(Fmt.bolivares(store.amountInBolivares))
+                    .font(.title2.weight(.semibold))
+                    .monospacedDigit()
+                Text("\(Fmt.money(store.planPrice)) × \(Fmt.bolivares(pay.rate)) · tasa oficial del \(pay.useEuroRate ? "euro" : "dólar") (BCV) del \(Fmt.day(pay.rateDate))")
+                    .font(.caption)
+                    .foregroundStyle(Palette.ink3)
+            }
+            .padding(.vertical, 4)
+        }
+        Section("Datos para el Pago Móvil") {
+            copyRow("Banco", pay.mobileBank, copy: false)
+            copyRow("Teléfono", pay.mobilePhone)
+            copyRow("RIF o cédula", pay.mobileID)
+            copyRow("Monto exacto", Fmt.decimal2(store.amountInBolivares))
+        }
+        Section {
+            TextField("Número de referencia", text: $reference)
+                .keyboardType(.numberPad)
+            Picker("Banco desde el que pagaste", selection: $bank) {
+                ForEach(banks, id: \.self) { bank in
+                    Text(bank).tag(bank)
+                }
+            }
+            Button("Enviar comprobante") {
+                if store.submitPagoMovil(reference: reference, bank: bank) { dismiss() }
+            }
+            .fontWeight(.semibold)
+        } footer: {
+            Text("Lo verificamos en minutos y activamos tu plan.")
+        }
+    }
+
+    @ViewBuilder
+    private var crypto: some View {
+        let coin = method.name
+        let address = store.state.pay.wallet(for: network)
+        Section {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Monto exacto")
+                    .font(.caption)
+                    .foregroundStyle(Palette.ink3)
+                Text("\(Fmt.decimal2(store.planPrice)) \(coin)")
+                    .font(.title2.weight(.semibold))
+                    .monospacedDigit()
+            }
+            .padding(.vertical, 4)
+            Picker("Red", selection: $network) {
+                ForEach(method.networks) { network in
+                    Text(network.name).tag(network)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+        Section {
+            copyRow("Dirección \(coin) en \(network.name)", address.isEmpty ? "Configúrala en Administración › Planes" : address,
+                    copy: !address.isEmpty)
+            NoticeView(level: .warn, text: "Envía solo \(coin) por la red \(network.name). Si usas otra red o moneda, el pago se pierde.")
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+        }
+        Section {
+            TextField("Código de la transacción (opcional)", text: $hash)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            Button("Ya envié el pago") {
+                store.submitCrypto(coin: coin, network: network, hash: hash)
+                dismiss()
+            }
+            .fontWeight(.semibold)
+        }
+    }
+
+    @ViewBuilder
+    private var card: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Total")
+                    .font(.caption)
+                    .foregroundStyle(Palette.ink3)
+                Text(Fmt.money(store.planPrice))
+                    .font(.title2.weight(.semibold))
+                Text("Débito o crédito, nacional o internacional")
+                    .font(.caption)
+                    .foregroundStyle(Palette.ink3)
+            }
+            .padding(.vertical, 4)
+        }
+        Section {
+            Button {
+                store.show("Demostración: aquí se abre la página segura del procesador de pagos.")
+            } label: {
+                Label("Pagar \(Fmt.money(store.planPrice)) con tarjeta", systemImage: "creditcard")
+                    .fontWeight(.semibold)
+            }
+        } footer: {
+            Text("Te llevamos a la página segura del procesador de pagos. Liminal nunca ve ni guarda los datos de tu tarjeta.")
+        }
+    }
+
+    private func copyRow(_ title: String, _ value: String, copy: Bool = true) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(Palette.ink3)
+                Text(value)
+                    .foregroundStyle(Palette.ink)
+                    .monospacedDigit()
+                    .textSelection(.enabled)
+            }
+            Spacer(minLength: 8)
+            if copy {
+                Button("Copiar") {
+                    UIPasteboard.general.string = value
+                    store.show("Copiado")
+                }
+                .buttonStyle(.borderless)
+            }
         }
     }
 }

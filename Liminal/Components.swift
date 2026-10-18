@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Formatting (Spanish, with "." for thousands and "," for decimals)
 
@@ -16,6 +17,16 @@ enum Fmt {
         formatter.minimumFractionDigits = fractionDigits.lowerBound
         formatter.maximumFractionDigits = fractionDigits.upperBound
         return formatter
+    }
+
+    /// "Bs 10.810,36"
+    static func bolivares(_ value: Double) -> String {
+        "Bs " + (numberFormatter(fractionDigits: 2...2).string(from: NSNumber(value: value)) ?? "\(value)")
+    }
+
+    /// "11,00"
+    static func decimal2(_ value: Double) -> String {
+        numberFormatter(fractionDigits: 2...2).string(from: NSNumber(value: value)) ?? "\(value)"
     }
 
     static func int(_ value: Int) -> String {
@@ -168,6 +179,63 @@ struct AttachmentChip: View {
     }
 }
 
+/// A file in the composer or in a message, with what Lithium read from it.
+struct FileChip: View {
+    let attachment: Attachment
+    var onOpen: (() -> Void)? = nil
+    var onRemove: (() -> Void)? = nil
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if let data = attachment.thumbnail, let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 30, height: 30)
+                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+            } else if attachment.isReading {
+                ProgressView()
+                    .frame(width: 30, height: 30)
+            } else {
+                Image(systemName: attachment.kind.icon)
+                    .foregroundStyle(Palette.ink3)
+                    .frame(width: 30, height: 30)
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(attachment.name)
+                    .font(.footnote.weight(.medium))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Text(attachment.detail)
+                    .font(.caption2)
+                    .foregroundStyle(attachment.failed ? Palette.redText : Palette.ink3)
+                    .lineLimit(1)
+            }
+            if let onOpen {
+                Button(action: onOpen) {
+                    Image(systemName: "square.and.pencil")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Palette.ink3)
+                .accessibilityLabel("Abrir \(attachment.name) en el editor")
+            }
+            if let onRemove {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark.circle.fill")
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Palette.ink3)
+                .accessibilityLabel("Quitar \(attachment.name)")
+            }
+        }
+        .foregroundStyle(Palette.ink)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .frame(maxWidth: 260, alignment: .leading)
+    }
+}
+
 /// A short message with a traffic-light icon: green for good news, yellow for warnings, red for blocks.
 struct NoticeView: View {
     let level: StatusLevel
@@ -246,16 +314,11 @@ struct LimitNotice: View {
     @Environment(AppStore.self) private var store
 
     var body: some View {
-        let usage = store.state.usage
         let tier = store.state.prefs.tier
-        if tier == .adv && usage.adv >= usage.advCap {
-            NoticeView(level: .bad, text: "Usaste los \(usage.advCap) mensajes avanzados de esta ventana. Se recarga \(Fmt.relative(usage.resetAt)). Mientras tanto, el modo rápido sigue disponible.")
-        } else if tier == .adv && usage.week >= usage.weekCap {
-            NoticeView(level: .bad, text: "Llegaste al límite semanal del modo avanzado. Se recarga \(Fmt.relative(usage.weekResetAt)).")
-        } else if tier == .adv && Double(usage.adv) >= Double(usage.advCap) * 0.8 {
-            NoticeView(level: .warn, text: "Te quedan \(usage.advCap - usage.adv) mensajes avanzados en esta ventana de 5 horas.")
-        } else if tier == .fast && usage.fast >= usage.fastCap {
-            NoticeView(level: .bad, text: "Usaste los \(usage.fastCap) mensajes rápidos de hoy. Se recargan a medianoche.")
+        if let block = store.usageBlock(tier: tier) {
+            NoticeView(level: .bad, text: block)
+        } else if tier == .adv && store.sessionPercent >= 80 {
+            NoticeView(level: .warn, text: "Llevas \(Int(store.sessionPercent))% de esta sesión. El modo rápido gasta mucho menos.")
         }
     }
 }
@@ -358,7 +421,7 @@ struct ModelMenu: View {
     var body: some View {
         @Bindable var store = store
         Menu {
-            Section("Modelo") {
+            Section(Brand.modelName) {
                 Picker("Modelo", selection: $store.state.prefs.tier) {
                     ForEach(Tier.allCases) { tier in
                         Label(tier.name, systemImage: tier.icon).tag(tier)
@@ -378,14 +441,8 @@ struct ModelMenu: View {
                     .labelsHidden()
                 }
             }
-            Section("Motor") {
-                Picker("Motor", selection: $store.state.prefs.engine) {
-                    ForEach(store.enabledEngines) { engine in
-                        Text(engine.name).tag(engine)
-                    }
-                }
-                .pickerStyle(.inline)
-                .labelsHidden()
+            Section {
+                Text("\(Brand.modelName) combina varios motores y elige el mejor para cada mensaje.")
             }
         } label: {
             HStack(spacing: 4) {
@@ -402,7 +459,7 @@ struct ModelMenu: View {
 
     private var title: String {
         let prefs = store.state.prefs
-        return prefs.tier == .adv ? "Avanzado · \(prefs.effort.name)" : "Rápido"
+        return "\(Brand.modelName) \(prefs.tier.name)"
     }
 }
 

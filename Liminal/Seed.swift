@@ -77,14 +77,14 @@ enum Seed {
         ]
 
         let payments: [Payment] = [
-            Payment(date: now.addingTimeInterval(-40 * 60), email: "ana.rojas@ejemplo.com", plan: .mensual, amount: "11 USDT", network: .tron, status: .confirmado),
-            Payment(date: now.addingTimeInterval(-3 * hour), email: "pedro.gil@ejemplo.com", plan: .mensual, amount: "11 USDC", network: .base, status: .confirmado),
-            Payment(date: now.addingTimeInterval(-5 * hour), email: "luis.mendez@ejemplo.com", plan: .semanal, amount: "3 USDT", network: .tron, status: .pendiente),
-            Payment(date: now.addingTimeInterval(-9 * hour), email: "jose.marquez@ejemplo.com", plan: .mensual, amount: "11 USDC", network: .solana, status: .fallido),
-            Payment(date: now.addingTimeInterval(-26 * hour), email: "carla.diaz@ejemplo.com", plan: .mensual, amount: "11 USDT", network: .tron, status: .confirmado),
-            Payment(date: now.addingTimeInterval(-2 * day), email: "sofia.torres@ejemplo.com", plan: .mensual, amount: "11 USDC", network: .base, status: .confirmado),
-            Payment(date: now.addingTimeInterval(-3 * day), email: "valentina.r@ejemplo.com", plan: .semanal, amount: "3 USDT", network: .tron, status: .fallido),
-            Payment(date: now.addingTimeInterval(-30 * day), email: adminEmail, plan: .mensual, amount: "11 USDT", network: .tron, status: .confirmado)
+            Payment(date: now.addingTimeInterval(-40 * 60), email: "ana.rojas@ejemplo.com", plan: .mensual, amount: "11 USDT", method: "USDT · Tron", status: .confirmado),
+            Payment(date: now.addingTimeInterval(-3 * hour), email: "pedro.gil@ejemplo.com", plan: .mensual, amount: "11 USDC", method: "USDC · Base", status: .confirmado),
+            Payment(date: now.addingTimeInterval(-5 * hour), email: "luis.mendez@ejemplo.com", plan: .semanal, amount: "3 USDT", method: "USDT · Tron", status: .pendiente),
+            Payment(date: now.addingTimeInterval(-9 * hour), email: "jose.marquez@ejemplo.com", plan: .mensual, amount: "11 USDC", method: "USDC · Solana", status: .fallido),
+            Payment(date: now.addingTimeInterval(-26 * hour), email: "carla.diaz@ejemplo.com", plan: .mensual, amount: "11 USDT", method: "USDT · Tron", status: .confirmado),
+            Payment(date: now.addingTimeInterval(-2 * day), email: "sofia.torres@ejemplo.com", plan: .mensual, amount: "11 USDC", method: "USDC · Base", status: .confirmado),
+            Payment(date: now.addingTimeInterval(-3 * day), email: "valentina.r@ejemplo.com", plan: .semanal, amount: "3 USDT", method: "USDT · Tron", status: .fallido),
+            Payment(date: now.addingTimeInterval(-30 * day), email: adminEmail, plan: .mensual, amount: "11 USDT", method: "USDT · Tron", status: .confirmado)
         ]
 
         var paidUntilComponents = DateComponents()
@@ -102,7 +102,8 @@ enum Seed {
                          memory: true, network: .tron, plan: .mensual),
             usage: Usage(adv: 23, advCap: 65, week: 188, weekCap: 450, fast: 41, fastCap: 200,
                          fastDay: AppStore.dayKey(now), resetAt: now.addingTimeInterval(3.3 * hour),
-                         weekResetAt: now.addingTimeInterval(4.6 * day)),
+                         weekResetAt: now.addingTimeInterval(4.6 * day),
+                         credits: 18, creditsCap: 100, creditsResetAt: paidUntil),
             points: 1150,
             referralCode: "GABRIEL-7K2",
             pointsHistory: [
@@ -112,9 +113,9 @@ enum Seed {
                 PointsEntry(month: "ago 2026", reason: "Mes activo", points: 300)
             ],
             memories: [
-                Memory(text: "Está construyendo Liminal, una IA para Latinoamérica."),
-                Memory(text: "El plan cuesta $11 al mes y se paga con USDT o USDC."),
-                Memory(text: "Prefiere respuestas cortas y con ejemplos.")
+                Memory(text: "Está construyendo Liminal, una IA para Latinoamérica.", category: .negocio),
+                Memory(text: "El plan cuesta $11 al mes y se paga con USDT, USDC, tarjeta o Pago Móvil.", category: .negocio),
+                Memory(text: "Prefiere respuestas cortas y con ejemplos.", category: .preferencias)
             ],
             projects: [tienda, enfermeria],
             folders: [clientes, casa],
@@ -123,7 +124,9 @@ enum Seed {
             users: users,
             payments: payments,
             paidUntil: paidUntil,
-            telegramLinked: false
+            connectors: [.drive],
+            customConnectors: [],
+            pay: .defaults
         )
     }
 }

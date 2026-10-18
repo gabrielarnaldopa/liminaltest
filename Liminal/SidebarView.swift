@@ -33,6 +33,9 @@ struct SidebarView: View {
                     navRow("Nuevo chat", icon: "square.and.pencil", selected: store.route == .home) {
                         store.newChat()
                     }
+                    navRow("Liminal Dev", icon: "chevron.left.forwardslash.chevron.right", selected: false) {
+                        store.showDev = true
+                    }
                     if auth.session?.isAdmin == true {
                         navRow("Administración", icon: "shield.lefthalf.filled", selected: store.route == .admin) {
                             store.route = .admin
