@@ -119,6 +119,74 @@ struct Avatar: View {
     }
 }
 
+/// Three gray dots that rise in turn while an answer is on its way.
+struct TypingDots: View {
+    var size: CGFloat = 6
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        TimelineView(.animation) { context in
+            let time = context.date.timeIntervalSinceReferenceDate
+            HStack(spacing: size * 0.7) {
+                ForEach(0..<3, id: \.self) { index in
+                    let wave = reduceMotion ? 0.6 : TypingDots.wave(time, index: index)
+                    Circle()
+                        .fill(Palette.ink3)
+                        .frame(width: size, height: size)
+                        .opacity(0.4 + 0.6 * wave)
+                        .offset(y: -size * 0.5 * wave)
+                }
+            }
+            .frame(height: size * 2)
+        }
+        .accessibilityHidden(true)
+    }
+
+    /// 0 at rest, 1 at the top; each dot starts a little after the one before, every 1.2 seconds.
+    static func wave(_ time: Double, index: Int) -> Double {
+        let phase = (time / 1.2 - Double(index) * 0.13).truncatingRemainder(dividingBy: 1)
+        let p = phase < 0 ? phase + 1 : phase
+        return p < 0.35 ? sin(p / 0.35 * .pi) : 0
+    }
+}
+
+/// Gray text with a soft shine passing over it, for what Lithium is doing right now.
+struct Shimmer: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    @ViewBuilder func body(content: Content) -> some View {
+        if reduceMotion {
+            content.foregroundStyle(Palette.ink2)
+        } else {
+            TimelineView(.animation) { context in
+                let t = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 2.2) / 2.2
+                let center = -0.3 + 1.6 * t
+                content.foregroundStyle(LinearGradient(
+                    stops: [
+                        Gradient.Stop(color: Palette.ink3, location: 0),
+                        Gradient.Stop(color: Palette.ink3, location: 0.4),
+                        Gradient.Stop(color: Palette.ink, location: 0.5),
+                        Gradient.Stop(color: Palette.ink3, location: 0.6),
+                        Gradient.Stop(color: Palette.ink3, location: 1),
+                    ],
+                    startPoint: UnitPoint(x: center - 1, y: 0.5),
+                    endPoint: UnitPoint(x: center + 1, y: 0.5)))
+            }
+        }
+    }
+}
+
+extension View {
+    func shimmering(_ active: Bool = true) -> some View { modifier(ShimmerIf(active: active)) }
+}
+
+private struct ShimmerIf: ViewModifier {
+    let active: Bool
+    @ViewBuilder func body(content: Content) -> some View {
+        if active { content.modifier(Shimmer()) } else { content }
+    }
+}
+
 struct PulsingDot: View {
     var color: Color = Palette.yellow
     @State private var on = false
@@ -192,7 +260,7 @@ struct FileChip: View {
                     .resizable()
                     .scaledToFill()
                     .frame(width: 30, height: 30)
-                    .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             } else if attachment.isReading {
                 ProgressView()
                     .frame(width: 30, height: 30)
@@ -231,7 +299,7 @@ struct FileChip: View {
         .foregroundStyle(Palette.ink)
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .frame(maxWidth: 260, alignment: .leading)
     }
 }
@@ -252,7 +320,7 @@ struct NoticeView: View {
             Spacer(minLength: 0)
         }
         .padding(12)
-        .background(background, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(background, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 
@@ -363,7 +431,7 @@ struct Card<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Palette.raised, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(Palette.raised, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
@@ -394,7 +462,7 @@ struct ToastView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 11)
-                    .background(Palette.ink, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(Palette.ink, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
                     .padding(.horizontal, 24)
                     .padding(.bottom, 96)
@@ -470,7 +538,7 @@ struct LiminalToolbar: ViewModifier {
     func body(content: Content) -> some View {
         content
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Palette.bg, for: .navigationBar)
+            .liquidBars()
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     ModelMenu()
@@ -513,9 +581,9 @@ extension View {
         self
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(Palette.raised, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(Palette.raised, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(invalid ? Palette.red : Palette.line, lineWidth: invalid ? 1.5 : 1)
             )
     }

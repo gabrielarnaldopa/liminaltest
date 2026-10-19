@@ -337,7 +337,7 @@ struct SlashCommand: Identifiable, Equatable {
 
 /// A complete HTML file (or an SVG) in an answer, shown as a live preview.
 struct ArtifactDoc: Identifiable, Equatable {
-    enum Kind: String, Equatable { case page, slides, svg }
+    enum Kind: String, Equatable { case page, slides, svg, pdf }
 
     var index: Int
     var kind: Kind
@@ -352,6 +352,7 @@ struct ArtifactDoc: Identifiable, Equatable {
         case .page: return "Página web"
         case .slides: return "Presentación"
         case .svg: return "Imagen SVG"
+        case .pdf: return "PDF"
         }
     }
 
@@ -360,6 +361,7 @@ struct ArtifactDoc: Identifiable, Equatable {
         case .page: return "chevron.left.forwardslash.chevron.right"
         case .slides: return "play.rectangle"
         case .svg: return "photo"
+        case .pdf: return "doc.richtext"
         }
     }
 
@@ -377,6 +379,7 @@ struct ArtifactDoc: Identifiable, Equatable {
         if (l == "svg" || l == "xml") && lower.contains("<svg") { return .svg }
         guard l == "html" || l == "htm" || l.isEmpty else { return nil }
         guard lower.contains("<!doctype html") || lower.contains("<html>") || lower.contains("<html ") else { return nil }
+        if PagePDF.isPrintDoc(code) { return .pdf }
         let pageTitle = title(in: code) ?? ""
         let titleSaysSlides = pageTitle.lowercased().range(of: #"presentaci[oó]n|\bslides?\b|diapositivas"#, options: .regularExpression) != nil
         let classSaysSlides = lower.range(of: #"class=["'][^"']*\b(slide|slides|diapositiva)\b"#, options: .regularExpression) != nil
@@ -413,6 +416,7 @@ struct ArtifactDoc: Identifiable, Equatable {
                 case .page: name = "Página web"
                 case .slides: name = "Presentación"
                 case .svg: name = "Imagen SVG"
+                case .pdf: name = "Documento"
                 }
                 found.append(ArtifactDoc(index: found.count, kind: kind, code: code, title: title(in: code) ?? name,
                                          closed: j < lines.count, lines: body.count))

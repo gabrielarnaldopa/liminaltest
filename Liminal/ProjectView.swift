@@ -45,7 +45,7 @@ struct ProjectView: View {
             VStack(alignment: .leading, spacing: 20) {
                 // Header
                 HStack(alignment: .top, spacing: 14) {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(Color(hex: project.colorHex))
                         .frame(width: 40, height: 40)
                         .overlay(
@@ -78,7 +78,7 @@ struct ProjectView: View {
                         .frame(minHeight: 110)
                         .scrollContentBackground(.hidden)
                         .padding(8)
-                        .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .foregroundStyle(Palette.ink)
                         .accessibilityLabel("Instrucciones del proyecto")
                 }

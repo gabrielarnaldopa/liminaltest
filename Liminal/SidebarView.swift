@@ -178,7 +178,7 @@ struct SidebarView: View {
             compactColumn = .detail
         } label: {
             HStack(spacing: 10) {
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(Color(hex: project.colorHex))
                     .frame(width: 14, height: 14)
                 Text(project.name)
@@ -248,7 +248,7 @@ struct SidebarView: View {
                     .lineLimit(1)
                 Spacer(minLength: 4)
                 if working {
-                    PulsingDot(color: Palette.yellow)
+                    TypingDots(size: 4.5)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -305,7 +305,7 @@ struct SidebarView: View {
     }
 
     private func rowBackground(_ selected: Bool) -> some View {
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(selected ? Palette.sel : Color.clear)
             .padding(.horizontal, 6)
     }

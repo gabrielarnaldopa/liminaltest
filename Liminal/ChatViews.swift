@@ -222,10 +222,10 @@ struct MessageRow: View {
         VStack(alignment: .leading, spacing: 10) {
             if message.isPending {
                 HStack(spacing: 8) {
-                    PulsingDot(color: Palette.yellow)
+                    TypingDots()
                     Text(kind.pendingText)
                         .font(.subheadline)
-                        .foregroundStyle(Palette.ink3)
+                        .shimmering()
                 }
                 .accessibilityElement(children: .combine)
             } else {
@@ -285,7 +285,7 @@ struct MessageRow: View {
                 .foregroundStyle(Palette.ink)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(Palette.bubble, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .background(Palette.bubble, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .contextMenu {
                     Button {
                         copy()
@@ -320,10 +320,10 @@ struct MessageRow: View {
             }
             if message.isPending {
                 HStack(spacing: 8) {
-                    PulsingDot(color: message.tier == .adv ? Palette.yellow : Palette.ink3)
+                    TypingDots()
                     Text(pendingText)
                         .font(.subheadline)
-                        .foregroundStyle(Palette.ink3)
+                        .shimmering()
                 }
                 .accessibilityElement(children: .combine)
             } else {
@@ -372,15 +372,15 @@ struct MessageRow: View {
                     .font(.footnote)
                     .foregroundStyle(Palette.ink2)
                     .padding(10)
-                    .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
-                if !message.isStreaming && !message.stopped, let document = DocExport.document(in: message.text) {
-                    DocumentCard(document: document, pdfFirst: DocExport.prefersPDF(request)) { word in
-                        if let url = store.exportFile(chatID: chatID, messageID: message.id, word: word) {
+                if !message.isStreaming && !message.stopped, let found = documentHere {
+                    DocumentCard(document: found.1, pdfFirst: DocExport.prefersPDF(request)) { word in
+                        if let url = store.exportFile(chatID: chatID, messageID: found.0.id, word: word) {
                             shared = SharedFile(url: url)
                         }
                     } onEdit: {
-                        editing = EditorTarget(title: document.title, text: message.text, chatID: chatID, messageID: message.id)
+                        editing = EditorTarget(title: found.1.title, text: found.0.text, chatID: chatID, messageID: found.0.id)
                     }
                 }
                 if message.stopped {
@@ -394,6 +394,18 @@ struct MessageRow: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The document this answer offers to download: its own, or, when the person asked for a PDF or a Word
+    /// file and the answer only talks about it, the last document written earlier in the chat.
+    private var documentHere: (Message, DocumentInfo)? {
+        if let document = DocExport.document(in: message.text) { return (message, document) }
+        guard message.role == .bot, DocExport.asksForFile(request), let messages = store.chat(chatID)?.messages,
+              let index = messages.firstIndex(where: { $0.id == message.id }) else { return nil }
+        for earlier in messages[..<index].reversed() where earlier.role == .bot {
+            if let document = DocExport.document(in: earlier.text) { return (earlier, document) }
+        }
+        return nil
     }
 
     /// What the person asked right before this answer.
@@ -626,9 +638,9 @@ struct ComposerView: View {
                         }
                         .font(.footnote.weight(.medium))
                         .foregroundStyle(Palette.ink2)
-                        .padding(.horizontal, 11)
+                        .padding(.horizontal, 12)
                         .frame(height: 34)
-                        .background(Palette.sunk, in: Capsule())
+                        .liquidCapsule()
                     }
                     .accessibilityLabel("Modo: \(store.mode.name)")
 
@@ -697,12 +709,7 @@ struct ComposerView: View {
                 }
             }
             .padding(12)
-            .background(Palette.raised, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(focused ? Palette.line2 : Palette.line, lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.05), radius: 10, y: 2)
+            .liquidSurface(Liquid.field)
             .overlay(alignment: .top) {
                 // Typing "/" shows the commands over the composer.
                 if let query = SlashCommand.typing(store.draft) {
@@ -726,7 +733,7 @@ struct ComposerView: View {
         .padding(.top, 6)
         .padding(.bottom, 8)
         .frame(maxWidth: .infinity)
-        .background(Palette.bg)
+        .liquidBackdrop()
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
             switch result {
             case .success(let urls):
@@ -860,7 +867,7 @@ struct ComposerView: View {
         .font(.subheadline)
         .foregroundStyle(Palette.ink)
         .padding(8)
-        .background(Palette.redTint, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(Palette.redTint, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func toggleRecording() {
@@ -1021,8 +1028,8 @@ struct GeneratedMediaView: View {
                 .padding(.vertical, 8)
         }
         .background(Palette.sunk)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Palette.line, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Palette.line, lineWidth: 1))
         .frame(maxWidth: 420, alignment: .leading)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(kind == .video ? "Video creado a partir de: \(prompt)" : "Imagen creada a partir de: \(prompt)")
@@ -1236,6 +1243,7 @@ enum MarkdownBlock {
                     case .page: fallback = "Página web"
                     case .slides: fallback = "Presentación"
                     case .svg: fallback = "Imagen SVG"
+                    case .pdf: fallback = "Documento"
                     }
                     blocks.append(.artifact(ArtifactDoc(index: pages, kind: kind, code: code, title: ArtifactDoc.title(in: code) ?? fallback,
                                                         closed: closed, lines: body.count)))
@@ -1355,7 +1363,7 @@ struct DocumentCard: View {
                     .font(.title3)
                     .foregroundStyle(Palette.ink2)
                     .frame(width: 40, height: 48)
-                    .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(document.title)
@@ -1381,7 +1389,7 @@ struct DocumentCard: View {
                         .foregroundStyle(Palette.ink)
                         .padding(.horizontal, 12)
                         .frame(height: 34)
-                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Palette.line2, lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.line2, lineWidth: 1))
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Abrir en el editor")
@@ -1389,8 +1397,7 @@ struct DocumentCard: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.raised, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.line, lineWidth: 1))
+        .liquidSurface()
     }
 
     private func download(_ format: String, primary: Bool, action: @escaping () -> Void) -> some View {
@@ -1400,8 +1407,8 @@ struct DocumentCard: View {
                 .foregroundStyle(primary ? Palette.bg : Palette.ink)
                 .padding(.horizontal, 12)
                 .frame(height: 34)
-                .background(primary ? Palette.ink : Palette.raised, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(primary ? Color.clear : Palette.line2, lineWidth: 1))
+                .background(primary ? Palette.ink : Palette.raised, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(primary ? Color.clear : Palette.line2, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Descargar en \(format)")
@@ -1447,6 +1454,6 @@ struct CodeBlockView: View {
             }
         }
         .background(Palette.codeBg)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

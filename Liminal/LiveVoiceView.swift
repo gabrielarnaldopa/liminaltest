@@ -173,7 +173,7 @@ struct LiveVoiceView: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Palette.redTint, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(Palette.redTint, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
 
             Button {
                 store.endVoice()
@@ -183,7 +183,7 @@ struct LiveVoiceView: View {
                     .foregroundStyle(Palette.bg)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Palette.ink, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Palette.ink, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
             .buttonStyle(.plain)
         }

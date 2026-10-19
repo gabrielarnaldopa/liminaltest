@@ -108,7 +108,7 @@ enum Engine: String, Codable, CaseIterable, Identifiable, Hashable {
 
     var name: String {
         switch self {
-        case .deepseek: return "DeepSeek V4 Pro"
+        case .deepseek: return "DeepSeek V4.1 Flash"
         case .qwen: return "Qwen 3.6"
         case .glm: return "GLM-5.2"
         }
@@ -688,9 +688,9 @@ struct AdminConfig: Codable, Equatable {
     static let defaults = AdminConfig(priceMonthly: 11, priceWeekly: 3, advCap: 65, weekCap: 450, fastCap: 200,
                                       margin: 60, enabledEngines: Set(Engine.allCases), creditsCap: 100, creditCost: 0.021)
 
-    /// Dollars per million tokens for DeepSeek V4 Pro since 16 August 2026,
+    /// Dollars per million tokens for DeepSeek V4.1 Flash (October 2026),
     /// with 60% of the input cached and 85% of use off-peak in Venezuela.
-    static let costPerMillionTokens = 0.91
+    static let costPerMillionTokens = 0.25
 
     var computeBudget: Double { max(0, priceMonthly * (1 - margin / 100)) }
     var millionTokens: Double { computeBudget / Self.costPerMillionTokens }

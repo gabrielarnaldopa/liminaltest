@@ -165,7 +165,7 @@ struct AdminTile: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(Palette.raised, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Palette.raised, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 }
@@ -431,7 +431,7 @@ struct AdminPlans: View {
             } header: {
                 Text("Economía por usuario al mes")
             } footer: {
-                Text("Calculado con DeepSeek V4 Pro a $0,56 por millón de tokens y 2.000 tokens por mensaje.")
+                Text("Calculado con DeepSeek V4.1 Flash a $0,25 por millón de tokens y 2.000 tokens por mensaje.")
             }
 
             Section {

@@ -47,7 +47,7 @@ struct LoginView: View {
                     }
                     .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
                     .frame(height: 46)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .padding(.bottom, 10)
 
                     Button {
@@ -58,7 +58,7 @@ struct LoginView: View {
                             .foregroundStyle(Palette.ink)
                             .frame(maxWidth: .infinity)
                             .frame(height: 46)
-                            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Palette.line2, lineWidth: 1))
+                            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Palette.line2, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                     .padding(.bottom, 16)
@@ -141,7 +141,7 @@ struct LoginView: View {
                         }
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Palette.redTint, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .background(Palette.redTint, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         .padding(.bottom, 14)
                         .transition(.opacity)
                         .accessibilityElement(children: .combine)
@@ -154,15 +154,15 @@ struct LoginView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
                             .background(Palette.ink.opacity(secondsLeft > 0 ? 0.35 : 1),
-                                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                        in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
                     .buttonStyle(.plain)
                     .disabled(secondsLeft > 0)
                 }
                 .padding(20)
-                .background(Palette.raised, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .background(Palette.raised, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .stroke(Palette.line, lineWidth: 1)
                 )
                 .animation(.easeInOut(duration: 0.2), value: error)

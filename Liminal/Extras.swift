@@ -33,10 +33,10 @@ struct TokenUsage: Equatable, Sendable {
 }
 
 /// One measure for the whole plan, like on the web: answers fill the 5-hour session and the week,
-/// priced at the engine's real rates (half price off-peak). Fast costs about ten times less.
+/// priced at the engine's real rates (half price off-peak). Both modes use V4.1 Flash; Advanced spends more because it thinks.
 enum UsagePrice {
     struct Rates { let hit: Double; let miss: Double; let out: Double }
-    static let advanced = Rates(hit: 0.044, miss: 1.32, out: 3.96)   // USD per 1M tokens at peak hours
+    static let advanced = Rates(hit: 0.006, miss: 0.3, out: 1.2)     // USD per 1M tokens at peak hours: V4.1 Flash, thinking more
     static let fast = Rates(hit: 0.006, miss: 0.3, out: 1.2)
     static let sessionLimit = 0.25                                     // USD of compute per 5 hours
     static let weekLimit = 1.0                                         // USD of compute per week
@@ -167,7 +167,7 @@ struct WidgetBlockView: View {
     var body: some View {
         WebView(content: .html(html))
             .frame(height: height)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 

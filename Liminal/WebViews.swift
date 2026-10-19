@@ -18,7 +18,7 @@ struct ToolStepsView: View {
             ForEach(steps) { step in
                 HStack(spacing: 8) {
                     if step.isBusy {
-                        PulsingDot(color: Palette.yellow)
+                        TypingDots(size: 4.5)
                     } else {
                         Image(systemName: step.isSearch ? "magnifyingglass" : "globe")
                             .foregroundStyle(Palette.ink3)
@@ -27,11 +27,11 @@ struct ToolStepsView: View {
                         Button {
                             onOpen(url)
                         } label: {
-                            Text(step.label).lineLimit(1)
+                            Text(step.label).lineLimit(1).shimmering(step.isBusy)
                         }
                         .buttonStyle(.plain)
                     } else {
-                        Text(step.label).lineLimit(1)
+                        Text(step.label).lineLimit(1).shimmering(step.isBusy)
                     }
                 }
                 .font(.footnote)
@@ -71,8 +71,8 @@ struct AskCardView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Palette.raised, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.line2, lineWidth: 1))
+        .background(Palette.raised, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Palette.line2, lineWidth: 1))
     }
 
     private func answerButton(_ title: String, primary: Bool, action: @escaping () -> Void) -> some View {
@@ -82,8 +82,8 @@ struct AskCardView: View {
                 .foregroundStyle(primary ? Palette.bg : Palette.ink)
                 .padding(.horizontal, 12)
                 .frame(height: 34)
-                .background(primary ? Palette.ink : Palette.raised, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(primary ? Color.clear : Palette.line2, lineWidth: 1))
+                .background(primary ? Palette.ink : Palette.raised, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(primary ? Color.clear : Palette.line2, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
@@ -128,44 +128,90 @@ struct ArtifactCard: View {
     let doc: ArtifactDoc
     let writing: Bool
     let onOpen: () -> Void
+    @State private var making = false
+    @State private var shared: SharedFile? = nil
+
+    private var isPDF: Bool { doc.kind == .pdf && !writing }
 
     var body: some View {
-        Button(action: onOpen) {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .fill(Palette.sunk)
-                    if writing {
-                        PulsingDot(color: Palette.yellow)
-                    } else {
-                        Image(systemName: doc.icon)
-                            .foregroundStyle(Palette.ink2)
+        HStack(spacing: 12) {
+            Button(action: onOpen) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: Liquid.control, style: .continuous)
+                            .fill(Palette.sunk)
+                        if writing {
+                            TypingDots(size: 5)
+                        } else {
+                            Image(systemName: doc.icon)
+                                .foregroundStyle(Palette.ink2)
+                        }
+                    }
+                    .frame(width: 44, height: 44)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(doc.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Palette.ink)
+                            .lineLimit(1)
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(Palette.ink3)
+                    }
+                    Spacer(minLength: 8)
+                    if !isPDF {
+                        Text(writing ? "Ver código" : "Abrir")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(writing ? Palette.ink2 : Palette.bg)
+                            .padding(.horizontal, 14)
+                            .frame(height: 34)
+                            .background(writing ? Palette.sunk : Palette.ink, in: Capsule())
                     }
                 }
-                .frame(width: 44, height: 44)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(doc.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Palette.ink)
-                        .lineLimit(1)
-                    Text(writing ? "\(doc.kindName) · escribiendo… \(doc.lines) líneas" : "\(doc.kindName) · \(doc.lines) líneas")
-                        .font(.caption)
-                        .foregroundStyle(Palette.ink3)
-                }
-                Spacer(minLength: 8)
-                Text(writing ? "Ver código" : "Abrir")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(writing ? Palette.ink2 : Palette.bg)
-                    .padding(.horizontal, 12)
-                    .frame(height: 32)
-                    .background(writing ? Palette.sunk : Palette.ink, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .contentShape(Rectangle())
             }
-            .padding(12)
-            .background(Palette.raised, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.line, lineWidth: 1))
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(doc.kindName): \(doc.title). Abrir")
+            if isPDF {
+                Button(action: makePDF) {
+                    HStack(spacing: 6) {
+                        if making {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "arrow.down.doc")
+                        }
+                        Text("PDF")
+                    }
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Palette.bg)
+                    .padding(.horizontal, 14)
+                    .frame(height: 34)
+                    .background(Palette.ink, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(making)
+                .accessibilityLabel("Descargar PDF")
+            }
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(doc.kindName): \(doc.title). Abrir")
+        .padding(12)
+        .liquidSurface()
+        .sheet(item: $shared) { file in
+            ShareSheet(url: file.url)
+        }
+    }
+
+    private var subtitle: String {
+        if writing { return "\(doc.kindName) · escribiendo… \(doc.lines) líneas" }
+        return isPDF ? "PDF · listo para descargar" : "\(doc.kindName) · \(doc.lines) líneas"
+    }
+
+    private func makePDF() {
+        making = true
+        Task { @MainActor in
+            if let url = await PagePDF.make(html: doc.code, title: doc.title) {
+                shared = SharedFile(url: url)
+            }
+            making = false
+        }
     }
 }
 
@@ -182,7 +228,7 @@ struct ArtifactView: View {
                 Image(systemName: doc.icon)
                     .foregroundStyle(Palette.ink2)
                     .frame(width: 34, height: 34)
-                    .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(doc.title)
                         .font(.subheadline.weight(.semibold))
@@ -370,7 +416,7 @@ struct BrowserView: View {
                     .font(.subheadline)
                     .padding(.horizontal, 12)
                     .frame(height: 36)
-                    .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 Button {
                     model.reload()
@@ -500,8 +546,8 @@ struct SlashSuggestions: View {
             }
             .frame(maxHeight: 260)
         }
-        .background(Palette.raised, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Palette.line, lineWidth: 1))
+        .background(Palette.raised, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Palette.line, lineWidth: 1))
         .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
     }
 }

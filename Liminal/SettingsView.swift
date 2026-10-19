@@ -237,7 +237,7 @@ struct AppearanceSettings: View {
                         Text("¿Me ayudas con un mensaje para mis clientes?")
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(Palette.bubble, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .background(Palette.bubble, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
                     }
                     Text("Claro. Cuéntame qué vendes y te propongo tres versiones.")
                 }
@@ -446,7 +446,7 @@ struct PlanSettings: View {
                              detail: (usage.sessionUSD ?? 0) > 0 ? "Se recarga \(Fmt.relative(usage.sessionResetAt ?? Date()))" : "Empieza con tu primer mensaje")
                 PercentMeter(title: "Esta semana", percent: store.weekPercent,
                              detail: "Se recarga \(Fmt.relative(usage.weekResetAt)) · \(Fmt.tokens(usage.weekTokens ?? 0)) tokens")
-                Text("Una sola medida para todo tu plan: el chat y Liminal Dev comparten la sesión y la semana. Se mide en tokens; el modo rápido gasta unas diez veces menos y sigue disponible aunque se acabe la sesión.")
+                Text("Una sola medida para todo tu plan: el chat y Liminal Dev comparten la sesión y la semana. Se mide en tokens; el modo rápido gasta varias veces menos porque no se pone a pensar, y sigue disponible aunque se acabe la sesión.")
                     .font(.caption).foregroundStyle(Palette.ink3)
                 UsageMeter(title: "Créditos para imágenes y video", used: usage.credits, cap: usage.creditsCap,
                            detail: "Imagen: 1 crédito · Video de 5 s: 5 créditos · Se renuevan el \(Fmt.day(usage.creditsResetAt))")
@@ -774,7 +774,7 @@ struct ConnectorsSettings: View {
                         Image(systemName: kind.icon)
                             .foregroundStyle(Palette.ink2)
                             .frame(width: 34, height: 34)
-                            .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                            .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         VStack(alignment: .leading, spacing: 2) {
                             Text(kind.name)
                                 .foregroundStyle(Palette.ink)

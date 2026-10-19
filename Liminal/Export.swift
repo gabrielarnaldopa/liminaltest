@@ -28,7 +28,7 @@ enum DocExport {
 
     /// The title and size of a document answer, or nil for an ordinary answer.
     static func document(in markdown: String) -> DocumentInfo? {
-        let text = markdown.drop(while: { $0.isWhitespace })
+        guard let text = source(of: markdown) else { return nil }
         guard text.first == "#", let second = text.dropFirst().first, second == " " || second == "\t" else { return nil }
         let firstLine = text.prefix(while: { $0 != "\n" && $0 != "\r" })
         let title = clean(String(firstLine.dropFirst()))
@@ -36,6 +36,22 @@ enum DocExport {
         let body = text.dropFirst(firstLine.count)
         let words = body.split(whereSeparator: { $0.isWhitespace || "|#*>-".contains($0) }).count
         return DocumentInfo(title: title, words: words)
+    }
+
+    /// The document inside an answer, from its title on: Lithium sometimes writes a short sentence before it.
+    /// A title further down only counts when a real document follows (60 words or more).
+    static func source(of markdown: String) -> Substring? {
+        let text = markdown.drop(while: { $0.isWhitespace })
+        if text.hasPrefix("# ") || text.hasPrefix("#\t") { return text }
+        guard let range = text.range(of: #"\n#[ \t]+\S"#, options: .regularExpression),
+              text.distance(from: text.startIndex, to: range.lowerBound) <= 600 else { return nil }
+        let rest = text[text.index(after: range.lowerBound)...]
+        return rest.split(whereSeparator: { $0.isWhitespace }).count >= 60 ? rest : nil
+    }
+
+    /// True when the request asks for a file to download (a PDF, a Word file, a document).
+    static func asksForFile(_ request: String) -> Bool {
+        request.lowercased().range(of: #"\b(pdf|word|docx|documento|archivo|descarga|descargar)\b"#, options: .regularExpression) != nil
     }
 
     /// True when the request asks for a PDF and not for a Word file, so the card offers PDF first.

@@ -1358,7 +1358,7 @@ final class AppStore {
     /// Writes a message as a PDF or Word file and returns where it is.
     func exportFile(chatID: UUID, messageID: UUID, word: Bool) -> URL? {
         guard let chat = chat(chatID), let message = chat.messages.first(where: { $0.id == messageID }) else { return nil }
-        return exportFile(markdown: message.text, title: chat.title, word: word)
+        return exportFile(markdown: String(DocExport.source(of: message.text) ?? Substring(message.text)), title: chat.title, word: word)
     }
 
     func exportFile(markdown: String, title: String, word: Bool) -> URL? {
