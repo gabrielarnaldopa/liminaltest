@@ -102,7 +102,7 @@ struct AdminSummary: View {
                     ForEach(services) { service in
                         HStack {
                             Text(service.name)
-                                .font(.subheadline)
+                                .font(.k(.subheadline))
                                 .foregroundStyle(Palette.ink)
                             Spacer(minLength: 8)
                             StatusChip(text: service.status, level: service.level)
@@ -148,17 +148,17 @@ struct AdminTile: View {
                         .frame(width: 8, height: 8)
                 }
                 Text(title)
-                    .font(.footnote)
+                    .font(.k(.footnote))
                     .foregroundStyle(Palette.ink3)
                     .lineLimit(1)
             }
             Text(value)
-                .font(.title2.weight(.semibold))
+                .font(.k(.title2).weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(Palette.ink)
             if let detail {
                 Text(detail)
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
                     .lineLimit(1)
             }
@@ -230,8 +230,8 @@ struct AdminUsers: View {
             Button("Cancelar", role: .cancel) {}
         } message: { user in
             Text(user.status == .suspendido
-                 ? "\(user.name) podrá volver a usar Liminal."
-                 : "\(user.name) no podrá usar Liminal hasta que lo reactives.")
+                 ? "\(user.name) podrá volver a usar Kuolki."
+                 : "\(user.name) no podrá usar Kuolki hasta que lo reactives.")
         }
     }
 
@@ -263,14 +263,14 @@ struct AdminUsers: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(user.name)
-                            .font(.body.weight(.semibold))
+                            .font(.k(.body).weight(.semibold))
                             .foregroundStyle(Palette.ink)
                         if user.isAdmin {
                             RoleBadge()
                         }
                     }
                     Text(user.email)
-                        .font(.footnote)
+                        .font(.k(.footnote))
                         .foregroundStyle(Palette.ink3)
                         .lineLimit(1)
                 }
@@ -280,7 +280,7 @@ struct AdminUsers: View {
             UsageMeter(title: "Avanzado esta semana", used: user.advThisWeek, cap: store.state.admin.weekCap)
             HStack {
                 Text("Plan \(user.plan.name.lowercased()) · \(Fmt.int(user.points)) puntos · visto \(Fmt.relative(user.lastSeen))")
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
                     .lineLimit(2)
                 Spacer(minLength: 8)
@@ -289,7 +289,7 @@ struct AdminUsers: View {
                         target = user
                         showConfirm = true
                     }
-                    .font(.footnote.weight(.semibold))
+                    .font(.k(.footnote).weight(.semibold))
                     .foregroundStyle(user.status == .suspendido ? Palette.greenText : Palette.redText)
                     .buttonStyle(.borderless)
                 }
@@ -471,7 +471,7 @@ struct AdminPlans: View {
                             Text(engine.name)
                                 .foregroundStyle(Palette.ink)
                             Text(engine.note)
-                                .font(.caption)
+                                .font(.k(.caption))
                                 .foregroundStyle(Palette.ink3)
                         }
                     }
@@ -489,7 +489,7 @@ struct AdminPlans: View {
                     store.savePaySettings(pay)
                 } label: {
                     Text("Guardar cambios")
-                        .font(.body.weight(.semibold))
+                        .font(.k(.body).weight(.semibold))
                         .frame(maxWidth: .infinity)
                 }
                 .disabled(!isValid || (draft == store.state.admin && pay == store.state.pay))
@@ -538,7 +538,7 @@ struct AdminPlans: View {
             Text(title)
                 .foregroundStyle(Palette.ink)
             Text(value)
-                .font(.footnote)
+                .font(.k(.footnote))
                 .monospacedDigit()
                 .foregroundStyle(Palette.ink3)
         }
@@ -592,15 +592,15 @@ struct AdminPayments: View {
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(payment.email)
-                                    .font(.subheadline.weight(.medium))
+                                    .font(.k(.subheadline).weight(.medium))
                                     .foregroundStyle(Palette.ink)
                                     .lineLimit(1)
                                 Text("\(payment.plan.name) · \(payment.method) · \(Fmt.relative(payment.date))")
-                                    .font(.caption)
+                                    .font(.k(.caption))
                                     .foregroundStyle(Palette.ink3)
                                 if !payment.reference.isEmpty {
                                     Text("Referencia \(payment.reference)")
-                                        .font(.caption)
+                                        .font(.k(.caption))
                                         .monospacedDigit()
                                         .foregroundStyle(Palette.ink3)
                                 }
@@ -608,7 +608,7 @@ struct AdminPayments: View {
                             Spacer(minLength: 8)
                             VStack(alignment: .trailing, spacing: 4) {
                                 Text(payment.amount)
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(.k(.subheadline).weight(.semibold))
                                     .monospacedDigit()
                                     .foregroundStyle(Palette.ink)
                                 StatusChip(text: payment.status.label, level: payment.status.level)
@@ -626,7 +626,7 @@ struct AdminPayments: View {
                                 }
                                 .foregroundStyle(Palette.redText)
                             }
-                            .font(.footnote.weight(.semibold))
+                            .font(.k(.footnote).weight(.semibold))
                             .buttonStyle(.bordered)
                         }
                     }

@@ -404,7 +404,7 @@ enum PayMethod: String, CaseIterable, Identifiable {
     }
 }
 
-/// How Liminal gets paid. The server updates the BCV rates every day.
+/// How Kuolki gets paid. The server updates the BCV rates every day.
 struct PaymentSettings: Codable, Equatable {
     var rateEur: Double
     var rateUsd: Double
@@ -597,7 +597,7 @@ struct Usage: Codable, Equatable {
     var credits: Int
     var creditsCap: Int
     var creditsResetAt: Date
-    // Usage measured in tokens (dollars of compute), shared by the chat and Liminal Dev.
+    // Usage measured in tokens (dollars of compute), shared by the chat and Kuolki Dev.
     var sessionUSD: Double? = nil
     var sessionResetAt: Date? = nil
     var weekUSD: Double? = nil
@@ -682,7 +682,7 @@ struct AdminConfig: Codable, Equatable {
     /// The Lithium server: its address and the app key chosen when it was created. Empty means demo answers.
     var serverURL: String? = nil
     var serverKey: String? = nil
-    /// The web app on GitHub Pages, where Liminal Dev runs.
+    /// The web app on GitHub Pages, where Kuolki Dev runs.
     var webAppURL: String? = nil
 
     static let defaults = AdminConfig(priceMonthly: 11, priceWeekly: 3, advCap: 65, weekCap: 450, fastCap: 200,

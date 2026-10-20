@@ -7,6 +7,10 @@ struct LiminalApp: App {
     @State private var auth = AuthService()
     @State private var store = AppStore()
 
+    init() {
+        KFont.applyToBars()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -39,13 +43,14 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.25), value: auth.session == nil)
         .overlay(alignment: .bottom) { ToastView() }
         .preferredColorScheme(store.state.prefs.theme.colorScheme)
+        .font(.k(.body))
         .dynamicTypeSize(store.state.prefs.fontScale.dynamicTypeSize)
         .environment(\.locale, Fmt.locale)
         .tint(Palette.ink)
         .onChange(of: store.state) { store.scheduleSave() }
         .onOpenURL { url in store.open(url) }
         .task {
-            AppStore.deviceName = "\(UIDevice.current.model) · app de Liminal"
+            AppStore.deviceName = "\(UIDevice.current.model) · app de Kuolki"
             store.accountEmail = auth.session?.email
             store.appBecameActive()
         }

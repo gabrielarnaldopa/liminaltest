@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The Liminal mark: an L, a b and a corner interlocked on an 8-unit grid (792 × 792 units).
+/// The Kuolki mark: an L, a b and a corner interlocked on an 8-unit grid (792 × 792 units).
 /// Shared by the app and the Dynamic Island.
 struct LogoMark: Shape {
     enum Piece { case l, b, corner }

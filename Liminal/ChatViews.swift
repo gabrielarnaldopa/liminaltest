@@ -16,17 +16,17 @@ struct HomeView: View {
                 AssemblingLogo(size: 48)
                 VStack(spacing: 6) {
                     Text("\(store.greeting), \(firstName)")
-                        .font(.title.weight(.semibold))
+                        .font(.k(.title).weight(.semibold))
                         .foregroundStyle(Palette.ink)
                     Text(subtitle)
-                        .font(.body)
+                        .font(.k(.body))
                         .foregroundStyle(Palette.ink3)
                 }
                 .multilineTextAlignment(.center)
 
                 if store.isTemporary {
                     Label("Chat temporal: no se guarda en tu historial ni en la memoria.", systemImage: "eye.slash")
-                        .font(.footnote)
+                        .font(.k(.footnote))
                         .foregroundStyle(Palette.yellowText)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
@@ -43,7 +43,7 @@ struct HomeView: View {
 
                 if store.mode != .general {
                     Text("Modo \(store.mode.name): \(store.mode.summary)")
-                        .font(.footnote)
+                        .font(.k(.footnote))
                         .foregroundStyle(Palette.ink3)
                         .transition(.opacity)
                 }
@@ -132,7 +132,7 @@ struct ChatView: View {
             return .handled
         })
         .safeAreaInset(edge: .bottom) {
-            ComposerView(placeholder: "Responde a Liminal")
+            ComposerView(placeholder: "Responde a Kuolki")
         }
         .liminalToolbar()
         .toolbar {
@@ -224,7 +224,7 @@ struct MessageRow: View {
                 HStack(spacing: 8) {
                     TypingDots()
                     Text(kind.pendingText)
-                        .font(.subheadline)
+                        .font(.k(.subheadline))
                         .shimmering()
                 }
                 .accessibilityElement(children: .combine)
@@ -257,10 +257,10 @@ struct MessageRow: View {
                         }
                         Spacer(minLength: 8)
                         Text("\(Brand.modelName) · \(kind.name) · \(kind.creditsText)")
-                            .font(.caption2)
+                            .font(.k(.caption2))
                             .lineLimit(1)
                     }
-                    .font(.subheadline)
+                    .font(.k(.subheadline))
                     .foregroundStyle(Palette.ink3)
                     .buttonStyle(.plain)
                 }
@@ -278,7 +278,7 @@ struct MessageRow: View {
             }
             if let key = message.command, let used = SlashCommand.find(key) {
                 Label(used.title, systemImage: used.icon)
-                    .font(.caption2)
+                    .font(.k(.caption2))
                     .foregroundStyle(Palette.ink3)
             }
             Text(message.text)
@@ -302,7 +302,7 @@ struct MessageRow: View {
                 }
             if message.spoken == true {
                 Label("Dicho en voz alta", systemImage: "waveform")
-                    .font(.caption2)
+                    .font(.k(.caption2))
                     .foregroundStyle(Palette.ink3)
             }
         }
@@ -322,7 +322,7 @@ struct MessageRow: View {
                 HStack(spacing: 8) {
                     TypingDots()
                     Text(pendingText)
-                        .font(.subheadline)
+                        .font(.k(.subheadline))
                         .shimmering()
                 }
                 .accessibilityElement(children: .combine)
@@ -338,7 +338,7 @@ struct MessageRow: View {
                 if let notice = message.notice, !message.isStreaming {
                     HStack(spacing: 10) {
                         Label(notice, systemImage: "arrow.clockwise")
-                            .font(.footnote)
+                            .font(.k(.footnote))
                             .foregroundStyle(Palette.ink2)
                         if isLast && !store.isStreaming {
                             Button("Continuar") {
@@ -346,7 +346,7 @@ struct MessageRow: View {
                                 store.send()
                             }
                             .buttonStyle(.bordered)
-                            .font(.footnote.weight(.semibold))
+                            .font(.k(.footnote).weight(.semibold))
                         }
                     }
                 }
@@ -369,7 +369,7 @@ struct MessageRow: View {
                         .buttonStyle(.borderless)
                         .fontWeight(.semibold)
                     }
-                    .font(.footnote)
+                    .font(.k(.footnote))
                     .foregroundStyle(Palette.ink2)
                     .padding(10)
                     .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -385,7 +385,7 @@ struct MessageRow: View {
                 }
                 if message.stopped {
                     Label("Respuesta detenida", systemImage: "stop.circle")
-                        .font(.caption)
+                        .font(.k(.caption))
                         .foregroundStyle(Palette.redText)
                 }
                 if !message.isStreaming {
@@ -426,14 +426,14 @@ struct MessageRow: View {
     private var sourcesView: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Fuentes (demostración)")
-                .font(.caption)
+                .font(.k(.caption))
                 .foregroundStyle(Palette.ink3)
             FlowLayout(spacing: 6) {
                 ForEach(message.sources, id: \.self) { domain in
                     if let url = URL(string: "https://\(domain)") {
                         Link(destination: url) {
                             Label(domain, systemImage: "globe")
-                                .font(.caption)
+                                .font(.k(.caption))
                                 .foregroundStyle(Palette.ink2)
                                 .padding(.horizontal, 9)
                                 .padding(.vertical, 4)
@@ -458,10 +458,10 @@ struct MessageRow: View {
                     Image(systemName: "brain")
                     Text("Pensó \(message.thinkingSeconds) s")
                     Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.semibold))
+                        .font(.k(.caption2).weight(.semibold))
                         .rotationEffect(.degrees(showThought ? 90 : 0))
                 }
-                .font(.footnote)
+                .font(.k(.footnote))
                 .foregroundStyle(Palette.ink3)
             }
             .buttonStyle(.plain)
@@ -471,7 +471,7 @@ struct MessageRow: View {
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(Array(message.thought.enumerated()), id: \.offset) { _, line in
                         Text(line)
-                            .font(.footnote)
+                            .font(.k(.footnote))
                             .foregroundStyle(Palette.ink2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -555,12 +555,12 @@ struct MessageRow: View {
             Spacer(minLength: 8)
 
             Text(meta)
-                .font(.caption2)
+                .font(.k(.caption2))
                 .foregroundStyle(Palette.ink3)
                 .lineLimit(1)
                 .truncationMode(.head)
         }
-        .font(.subheadline)
+        .font(.k(.subheadline))
         .buttonStyle(.plain)
     }
 
@@ -636,7 +636,7 @@ struct ComposerView: View {
                             Text(store.mode.name)
                                 .lineLimit(1)
                         }
-                        .font(.footnote.weight(.medium))
+                        .font(.k(.footnote).weight(.medium))
                         .foregroundStyle(Palette.ink2)
                         .padding(.horizontal, 12)
                         .frame(height: 34)
@@ -661,7 +661,7 @@ struct ComposerView: View {
 
                     if store.state.prefs.tier == .adv && store.state.prefs.effort == .alto && !store.isStreaming && store.creating == nil {
                         Text("Cuenta doble")
-                            .font(.caption)
+                            .font(.k(.caption))
                             .foregroundStyle(Palette.yellowText)
                     }
 
@@ -670,7 +670,7 @@ struct ComposerView: View {
                             store.stop()
                         } label: {
                             Image(systemName: "stop.fill")
-                                .font(.footnote.weight(.bold))
+                                .font(.k(.footnote).weight(.bold))
                                 .foregroundStyle(.white)
                                 .frame(width: 34, height: 34)
                                 .background(Palette.red, in: Circle())
@@ -683,7 +683,7 @@ struct ComposerView: View {
                             store.startVoice()
                         } label: {
                             Image(systemName: "waveform")
-                                .font(.body.weight(.bold))
+                                .font(.k(.body).weight(.bold))
                                 .foregroundStyle(Palette.bg)
                                 .frame(width: 34, height: 34)
                                 .background(Palette.ink, in: Circle())
@@ -696,7 +696,7 @@ struct ComposerView: View {
                             store.send()
                         } label: {
                             Image(systemName: "arrow.up")
-                                .font(.body.weight(.bold))
+                                .font(.k(.body).weight(.bold))
                                 .foregroundStyle(Palette.bg)
                                 .frame(width: 34, height: 34)
                                 .background(canSend ? Palette.ink : Palette.ink3.opacity(0.5), in: Circle())
@@ -724,8 +724,8 @@ struct ComposerView: View {
                 }
             }
 
-            Text("Liminal puede equivocarse. Revisa lo importante.")
-                .font(.caption2)
+            Text("Kuolki puede equivocarse. Revisa lo importante.")
+                .font(.k(.caption2))
                 .foregroundStyle(Palette.ink3)
         }
         .frame(maxWidth: 720)
@@ -824,7 +824,7 @@ struct ComposerView: View {
             }
         } label: {
             Image(systemName: "plus")
-                .font(.body.weight(.semibold))
+                .font(.k(.body).weight(.semibold))
                 .foregroundStyle(Palette.ink2)
                 .frame(width: 34, height: 34)
                 .background(Palette.sunk, in: Circle())
@@ -839,12 +839,12 @@ struct ComposerView: View {
                 .lineLimit(1)
             Button(action: onRemove) {
                 Image(systemName: "xmark")
-                    .font(.caption2.weight(.bold))
+                    .font(.k(.caption2).weight(.bold))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Quitar \(title)")
         }
-        .font(.footnote.weight(.medium))
+        .font(.k(.footnote).weight(.medium))
         .foregroundStyle(Palette.ink)
         .padding(.horizontal, 11)
         .frame(height: 34)
@@ -864,7 +864,7 @@ struct ComposerView: View {
             }
             .buttonStyle(.bordered)
         }
-        .font(.subheadline)
+        .font(.k(.subheadline))
         .foregroundStyle(Palette.ink)
         .padding(8)
         .background(Palette.redTint, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -931,13 +931,13 @@ struct EditorView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 TextEditor(text: $text)
-                    .font(.body)
+                    .font(.k(.body))
                     .scrollContentBackground(.hidden)
                     .padding(.horizontal, 12)
                     .background(Palette.raised)
                     .accessibilityLabel("Documento")
                 Text("Usa ### para títulos y - al inicio de la línea para listas.")
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
                     .padding(8)
             }
@@ -1007,14 +1007,14 @@ struct GeneratedMediaView: View {
                     .overlay {
                         if kind == .video {
                             Image(systemName: "play.fill")
-                                .font(.title2)
+                                .font(.k(.title2))
                                 .foregroundStyle(.white)
                                 .frame(width: 52, height: 52)
                                 .background(Color.black.opacity(0.45), in: Circle())
                         }
                     }
                 Text(kind == .video ? "0:05 · 720p" : "1024 × 1024")
-                    .font(.caption2)
+                    .font(.k(.caption2))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
@@ -1022,7 +1022,7 @@ struct GeneratedMediaView: View {
                     .padding(10)
             }
             Text("Vista previa de demostración")
-                .font(.caption)
+                .font(.k(.caption))
                 .foregroundStyle(Palette.ink3)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
@@ -1108,11 +1108,11 @@ struct MarkdownView: View {
         switch block {
         case .title(let line):
             Text(Self.inline(line))
-                .font(.title3.weight(.bold))
+                .font(.k(.title3).weight(.bold))
                 .fixedSize(horizontal: false, vertical: true)
         case .heading(let line):
             Text(Self.inline(line))
-                .font(.headline)
+                .font(.k(.headline))
                 .padding(.top, 4)
         case .rule:
             Rectangle()
@@ -1360,18 +1360,18 @@ struct DocumentCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 Image(systemName: "doc.text")
-                    .font(.title3)
+                    .font(.k(.title3))
                     .foregroundStyle(Palette.ink2)
                     .frame(width: 40, height: 48)
                     .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(document.title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.k(.subheadline).weight(.semibold))
                         .foregroundStyle(Palette.ink)
                         .lineLimit(2)
                     Text("Documento · \(Fmt.int(document.words)) palabras")
-                        .font(.caption)
+                        .font(.k(.caption))
                         .foregroundStyle(Palette.ink3)
                 }
             }
@@ -1385,7 +1385,7 @@ struct DocumentCard: View {
                 }
                 Button(action: onEdit) {
                     Label("Editar", systemImage: "square.and.pencil")
-                        .font(.footnote.weight(.semibold))
+                        .font(.k(.footnote).weight(.semibold))
                         .foregroundStyle(Palette.ink)
                         .padding(.horizontal, 12)
                         .frame(height: 34)
@@ -1403,7 +1403,7 @@ struct DocumentCard: View {
     private func download(_ format: String, primary: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Label(format, systemImage: "arrow.down.to.line")
-                .font(.footnote.weight(.semibold))
+                .font(.k(.footnote).weight(.semibold))
                 .foregroundStyle(primary ? Palette.bg : Palette.ink)
                 .padding(.horizontal, 12)
                 .frame(height: 34)
@@ -1425,7 +1425,7 @@ struct CodeBlockView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text(lang.isEmpty ? "código" : lang)
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.codeMuted)
                 Spacer()
                 Button {
@@ -1437,7 +1437,7 @@ struct CodeBlockView: View {
                     }
                 } label: {
                     Label(copied ? "Copiado" : "Copiar", systemImage: copied ? "checkmark" : "doc.on.doc")
-                        .font(.caption)
+                        .font(.k(.caption))
                         .foregroundStyle(Palette.codeMuted)
                 }
                 .buttonStyle(.plain)

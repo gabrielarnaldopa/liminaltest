@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 
 extension DocExport {
-    /// Draws the blocks on A4 pages. A document keeps its own title and has no Liminal line on top.
+    /// Draws the blocks on A4 pages. A document keeps its own title and has no Kuolki line on top.
     static func pdf(blocks all: [DocBlock], title fallback: String) -> Data {
         let (title, blocks, isDocument) = split(all, fallback: fallback)
         let page = CGRect(x: 0, y: 0, width: 595, height: 842)
@@ -64,7 +64,7 @@ extension DocExport {
             }
 
             if !isDocument {
-                draw("\(Brand.modelName) · Liminal", font: .systemFont(ofSize: 9), color: .gray, after: 6)
+                draw("\(Brand.modelName) · Kuolki", font: .systemFont(ofSize: 9), color: .gray, after: 6)
             }
             draw(title, font: .boldSystemFont(ofSize: isDocument ? 20 : 18), after: 12)
             for block in blocks {

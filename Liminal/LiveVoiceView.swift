@@ -66,7 +66,7 @@ struct LiveVoiceView: View {
                 Text(store.mode == .general ? "Conversación en vivo" : store.mode.name)
                     .lineLimit(1)
             }
-            .font(.footnote.weight(.medium))
+            .font(.k(.footnote).weight(.medium))
             .foregroundStyle(Palette.ink2)
             .padding(.horizontal, 12)
             .frame(height: 32)
@@ -76,12 +76,12 @@ struct LiveVoiceView: View {
 
             if session.onDevice {
                 Image(systemName: "lock.fill")
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
                     .accessibilityLabel("Tu voz se procesa en tu iPhone")
             }
             Text(session.startedAt, style: .timer)
-                .font(.footnote.weight(.medium))
+                .font(.k(.footnote).weight(.medium))
                 .monospacedDigit()
                 .foregroundStyle(Palette.ink3)
                 .accessibilityLabel("Tiempo de conversación")
@@ -95,11 +95,11 @@ struct LiveVoiceView: View {
                     .fill(statusColor)
                     .frame(width: 8, height: 8)
                 Text(statusTitle)
-                    .font(.headline)
+                    .font(.k(.headline))
                     .foregroundStyle(Palette.ink)
             }
             Text(statusHint)
-                .font(.footnote)
+                .font(.k(.footnote))
                 .foregroundStyle(Palette.ink3)
                 .multilineTextAlignment(.center)
         }
@@ -111,14 +111,14 @@ struct LiveVoiceView: View {
             VStack(alignment: .leading, spacing: 14) {
                 if !session.heard.isEmpty {
                     Text(verbatim: session.heard)
-                        .font(.body)
+                        .font(.k(.body))
                         .foregroundStyle(Palette.ink2)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .multilineTextAlignment(.trailing)
                 }
                 if !session.reply.isEmpty {
                     captionText
-                        .font(.title3.weight(.medium))
+                        .font(.k(.title3).weight(.medium))
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -167,7 +167,7 @@ struct LiveVoiceView: View {
                 Image(systemName: "exclamationmark.circle.fill")
                     .foregroundStyle(Palette.red)
                 Text(message)
-                    .font(.footnote)
+                    .font(.k(.footnote))
                     .foregroundStyle(Palette.redText)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -179,7 +179,7 @@ struct LiveVoiceView: View {
                 store.endVoice()
             } label: {
                 Text("Cerrar")
-                    .font(.body.weight(.semibold))
+                    .font(.k(.body).weight(.semibold))
                     .foregroundStyle(Palette.bg)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
@@ -195,12 +195,12 @@ struct LiveVoiceView: View {
         Button(action: action) {
             VStack(spacing: 8) {
                 Image(systemName: icon)
-                    .font(.title3.weight(.semibold))
+                    .font(.k(.title3).weight(.semibold))
                     .foregroundStyle(ink)
                     .frame(width: size, height: size)
                     .background(fill, in: Circle())
                 Text(title)
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
             }
         }
@@ -304,7 +304,7 @@ struct VoiceOrb: View {
             }
         case .muted:
             Image(systemName: "mic.slash.fill")
-                .font(.title.weight(.semibold))
+                .font(.k(.title).weight(.semibold))
                 .foregroundStyle(Palette.redText)
         default:
             LogoMark()

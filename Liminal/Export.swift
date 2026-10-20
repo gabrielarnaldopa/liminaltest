@@ -215,7 +215,7 @@ enum DocExport {
             return xml + "</w:tbl>" + paragraph("", after: 60)
         }
 
-        var body = isDocument ? "" : paragraph(run("\(Brand.modelName) · Liminal", size: 18, color: "6E6E73"))
+        var body = isDocument ? "" : paragraph(run("\(Brand.modelName) · Kuolki", size: 18, color: "6E6E73"))
         body += paragraph(run(title), style: "Title")
         for block in blocks {
             let marked = block.marked.isEmpty ? block.text : block.marked
@@ -253,7 +253,7 @@ enum DocExport {
             + "<w:style w:type=\"paragraph\" w:styleId=\"Heading1\"><w:name w:val=\"heading 1\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:uiPriority w:val=\"9\"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before=\"280\" w:after=\"100\"/><w:outlineLvl w:val=\"0\"/></w:pPr><w:rPr><w:b/><w:sz w:val=\"30\"/><w:szCs w:val=\"30\"/></w:rPr></w:style>"
             + "<w:style w:type=\"paragraph\" w:styleId=\"Heading2\"><w:name w:val=\"heading 2\"/><w:basedOn w:val=\"Normal\"/><w:next w:val=\"Normal\"/><w:uiPriority w:val=\"9\"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before=\"200\" w:after=\"80\"/><w:outlineLvl w:val=\"1\"/></w:pPr><w:rPr><w:b/><w:color w:val=\"48484A\"/><w:sz w:val=\"26\"/><w:szCs w:val=\"26\"/></w:rPr></w:style>"
             + "<w:style w:type=\"table\" w:default=\"1\" w:styleId=\"TableNormal\"><w:name w:val=\"Normal Table\"/><w:tblPr><w:tblInd w:w=\"0\" w:type=\"dxa\"/><w:tblCellMar><w:top w:w=\"0\" w:type=\"dxa\"/><w:left w:w=\"108\" w:type=\"dxa\"/><w:bottom w:w=\"0\" w:type=\"dxa\"/><w:right w:w=\"108\" w:type=\"dxa\"/></w:tblCellMar></w:tblPr></w:style>"
-            + "<w:style w:type=\"table\" w:styleId=\"Tabla\"><w:name w:val=\"Tabla Liminal\"/><w:basedOn w:val=\"TableNormal\"/><w:tblPr><w:tblBorders>\(borders)</w:tblBorders><w:tblCellMar><w:top w:w=\"60\" w:type=\"dxa\"/><w:left w:w=\"100\" w:type=\"dxa\"/><w:bottom w:w=\"60\" w:type=\"dxa\"/><w:right w:w=\"100\" w:type=\"dxa\"/></w:tblCellMar></w:tblPr></w:style>"
+            + "<w:style w:type=\"table\" w:styleId=\"Tabla\"><w:name w:val=\"Tabla Kuolki\"/><w:basedOn w:val=\"TableNormal\"/><w:tblPr><w:tblBorders>\(borders)</w:tblBorders><w:tblCellMar><w:top w:w=\"60\" w:type=\"dxa\"/><w:left w:w=\"100\" w:type=\"dxa\"/><w:bottom w:w=\"60\" w:type=\"dxa\"/><w:right w:w=\"100\" w:type=\"dxa\"/></w:tblCellMar></w:tblPr></w:style>"
             + "</w:styles>"
     }()
 

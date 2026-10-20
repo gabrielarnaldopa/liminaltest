@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-// Liminal's palette: the interface is light and dark gray only.
+// Kuolki's palette: the interface is light and dark gray only.
 // The macOS traffic-light colors carry meaning:
 // green = on, healthy, paid · yellow = in progress, near a limit, points · red = errors, stop, destructive.
 

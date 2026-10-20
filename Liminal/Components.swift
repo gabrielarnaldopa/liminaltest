@@ -76,7 +76,7 @@ struct StatusChip: View {
                 .fill(level.color)
                 .frame(width: 8, height: 8)
             Text(text)
-                .font(.caption.weight(.medium))
+                .font(.k(.caption).weight(.medium))
                 .foregroundStyle(Palette.ink2)
                 .lineLimit(1)
         }
@@ -90,7 +90,7 @@ struct StatusChip: View {
 struct RoleBadge: View {
     var body: some View {
         Text("Admin")
-            .font(.caption2.weight(.semibold))
+            .font(.k(.caption2).weight(.semibold))
             .foregroundStyle(Palette.ink2)
             .padding(.horizontal, 7)
             .padding(.vertical, 2)
@@ -229,7 +229,7 @@ struct AttachmentChip: View {
                 .accessibilityLabel("Quitar \(name)")
             }
         }
-        .font(.footnote)
+        .font(.k(.footnote))
         .foregroundStyle(Palette.ink)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
@@ -271,11 +271,11 @@ struct FileChip: View {
             }
             VStack(alignment: .leading, spacing: 1) {
                 Text(attachment.name)
-                    .font(.footnote.weight(.medium))
+                    .font(.k(.footnote).weight(.medium))
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Text(attachment.detail)
-                    .font(.caption2)
+                    .font(.k(.caption2))
                     .foregroundStyle(attachment.failed ? Palette.redText : Palette.ink3)
                     .lineLimit(1)
             }
@@ -314,7 +314,7 @@ struct NoticeView: View {
             Image(systemName: icon)
                 .foregroundStyle(level.color)
             Text(text)
-                .font(.footnote)
+                .font(.k(.footnote))
                 .foregroundStyle(Palette.ink)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
@@ -352,11 +352,11 @@ struct UsageMeter: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
-                    .font(.subheadline)
+                    .font(.k(.subheadline))
                     .foregroundStyle(Palette.ink)
                 Spacer(minLength: 8)
                 Text("\(Fmt.int(used)) de \(Fmt.int(cap))")
-                    .font(.subheadline)
+                    .font(.k(.subheadline))
                     .monospacedDigit()
                     .foregroundStyle(Palette.ink3)
             }
@@ -364,7 +364,7 @@ struct UsageMeter: View {
                 .tint(StatusLevel.forUsage(used: used, cap: cap).color)
             if let detail {
                 Text(detail)
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
             }
         }
@@ -402,7 +402,7 @@ struct ModeChip: View {
                 Image(systemName: mode.icon)
                 Text(mode.name)
             }
-            .font(.subheadline.weight(.medium))
+            .font(.k(.subheadline).weight(.medium))
             .foregroundStyle(selected ? Palette.bg : Palette.ink)
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
@@ -424,7 +424,7 @@ struct Card<Content: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             if let title {
                 Text(title)
-                    .font(.headline)
+                    .font(.k(.headline))
                     .foregroundStyle(Palette.ink)
             }
             content
@@ -457,7 +457,7 @@ struct ToastView: View {
         ZStack {
             if let text = store.notice {
                 Text(text)
-                    .font(.subheadline.weight(.medium))
+                    .font(.k(.subheadline).weight(.medium))
                     .foregroundStyle(Palette.bg)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 16)
@@ -515,10 +515,10 @@ struct ModelMenu: View {
         } label: {
             HStack(spacing: 4) {
                 Text(title)
-                    .font(.headline)
+                    .font(.k(.headline))
                     .foregroundStyle(Palette.ink)
                 Image(systemName: "chevron.down")
-                    .font(.caption.weight(.semibold))
+                    .font(.k(.caption).weight(.semibold))
                     .foregroundStyle(Palette.ink3)
             }
         }

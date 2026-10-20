@@ -171,7 +171,7 @@ enum Replies {
             return VoiceAnswer(text: "Hoy es \(fullDate(now)).")
         }
         if containsAny(plain, ["quien eres", "como te llamas", "que eres", "que puedes hacer", "en que me ayudas"]) {
-            return VoiceAnswer(text: "Soy Lithium, la inteligencia artificial de Liminal. Te ayudo con tu negocio, tus estudios, tu trabajo y lo del día a día. ¿Por dónde empezamos?")
+            return VoiceAnswer(text: "Soy Lithium, la inteligencia artificial de Kuolki. Te ayudo con tu negocio, tus estudios, tu trabajo y lo del día a día. ¿Por dónde empezamos?")
         }
         if short, containsAny(plain, ["gracias", "muy amable", "te pasaste"]) {
             return VoiceAnswer(text: "¡Con gusto\(you)! ¿Te ayudo con algo más?")

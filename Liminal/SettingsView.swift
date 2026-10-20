@@ -15,14 +15,14 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             HStack(spacing: 6) {
                                 Text(displayName)
-                                    .font(.headline)
+                                    .font(.k(.headline))
                                     .foregroundStyle(Palette.ink)
                                 if auth.session?.isAdmin == true {
                                     RoleBadge()
                                 }
                             }
                             Text(auth.session?.email ?? "")
-                                .font(.subheadline)
+                                .font(.k(.subheadline))
                                 .foregroundStyle(Palette.ink3)
                             StatusChip(text: "Plan \(store.state.prefs.plan.name.lowercased()) activo", level: .good)
                                 .padding(.top, 4)
@@ -118,7 +118,7 @@ struct GeneralSettings: View {
                 Text("Instrucciones personalizadas")
             } footer: {
                 let count = store.state.prefs.custom.count
-                Text("Liminal las tiene en cuenta en todos tus chats. \(count) de \(customLimit) caracteres.")
+                Text("Kuolki las tiene en cuenta en todos tus chats. \(count) de \(customLimit) caracteres.")
                     .foregroundStyle(count >= customLimit ? Palette.yellowText : Palette.ink3)
             }
         }
@@ -185,7 +185,7 @@ struct VoiceSettings: View {
             Section("Privacidad de tu voz") {
                 Label {
                     Text("Si tu iPhone lo permite, tu voz se convierte en texto dentro del teléfono y el audio no sale de él: lo verás con un candado durante la conversación. Si no, se usa el dictado del iPhone. Lithium solo recibe el texto.")
-                        .font(.footnote)
+                        .font(.k(.footnote))
                         .foregroundStyle(Palette.ink2)
                 } icon: {
                     Image(systemName: "lock.fill")
@@ -200,7 +200,7 @@ struct VoiceSettings: View {
     private var liveFooter: String {
         var text = "Ves cuándo está lista una imagen, un video o una respuesta larga, y pausas o terminas la conversación en vivo sin abrir la app. En iPhone con Isla Dinámica (14 Pro y más nuevos) aparece arriba; en los demás, en la pantalla bloqueada."
         if store.liveActivitiesOn && !LiveActivityController.shared.systemAllows {
-            text += " Ahora están apagadas en Ajustes del iPhone › Liminal › Actividades en vivo."
+            text += " Ahora están apagadas en Ajustes del iPhone › Kuolki › Actividades en vivo."
         }
         return text
     }
@@ -267,7 +267,7 @@ struct AppearanceSettings: View {
                 Text(name)
                     .foregroundStyle(Palette.ink)
                 Text(meaning)
-                    .font(.footnote)
+                    .font(.k(.footnote))
                     .foregroundStyle(Palette.ink3)
             }
         }
@@ -369,13 +369,13 @@ struct PrivacySettings: View {
             }
 
             Section("Dónde se procesan tus mensajes") {
-                Text("\(Brand.modelName) funciona en servidores de proveedores contratados por Liminal.")
-                    .font(.footnote)
+                Text("\(Brand.modelName) funciona en servidores de proveedores contratados por Kuolki.")
+                    .font(.k(.footnote))
                     .foregroundStyle(Palette.ink2)
             }
 
             Section("Tus datos") {
-                ShareLink(item: store.exportText(), subject: Text("Mis datos de Liminal")) {
+                ShareLink(item: store.exportText(), subject: Text("Mis datos de Kuolki")) {
                     Label("Exportar mis datos", systemImage: "square.and.arrow.up")
                         .foregroundStyle(Palette.ink)
                 }
@@ -429,10 +429,10 @@ struct PlanSettings: View {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Plan \(store.state.prefs.plan.name.lowercased())")
-                            .font(.headline)
+                            .font(.k(.headline))
                             .foregroundStyle(Palette.ink)
                         Text(price(for: store.state.prefs.plan))
-                            .font(.subheadline)
+                            .font(.k(.subheadline))
                             .foregroundStyle(Palette.ink3)
                     }
                     Spacer()
@@ -446,8 +446,8 @@ struct PlanSettings: View {
                              detail: (usage.sessionUSD ?? 0) > 0 ? "Se recarga \(Fmt.relative(usage.sessionResetAt ?? Date()))" : "Empieza con tu primer mensaje")
                 PercentMeter(title: "Esta semana", percent: store.weekPercent,
                              detail: "Se recarga \(Fmt.relative(usage.weekResetAt)) · \(Fmt.tokens(usage.weekTokens ?? 0)) tokens")
-                Text("Una sola medida para todo tu plan: el chat y Liminal Dev comparten la sesión y la semana. Se mide en tokens; el modo rápido gasta varias veces menos porque no se pone a pensar, y sigue disponible aunque se acabe la sesión.")
-                    .font(.caption).foregroundStyle(Palette.ink3)
+                Text("Una sola medida para todo tu plan: el chat y Kuolki Dev comparten la sesión y la semana. Se mide en tokens; el modo rápido gasta varias veces menos porque no se pone a pensar, y sigue disponible aunque se acabe la sesión.")
+                    .font(.k(.caption)).foregroundStyle(Palette.ink3)
                 UsageMeter(title: "Créditos para imágenes y video", used: usage.credits, cap: usage.creditsCap,
                            detail: "Imagen: 1 crédito · Video de 5 s: 5 créditos · Se renuevan el \(Fmt.day(usage.creditsResetAt))")
                 Button {
@@ -490,7 +490,7 @@ struct PlanSettings: View {
                             Text(payment.amount)
                                 .foregroundStyle(Palette.ink)
                             Text("\(Fmt.day(payment.date)) · \(payment.method)")
-                                .font(.caption)
+                                .font(.k(.caption))
                                 .foregroundStyle(Palette.ink3)
                         }
                         Spacer()
@@ -529,7 +529,7 @@ struct PointsSettings: View {
             Section {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Tus puntos")
-                        .font(.subheadline)
+                        .font(.k(.subheadline))
                         .foregroundStyle(Palette.ink3)
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Image(systemName: "star.fill")
@@ -540,7 +540,7 @@ struct PointsSettings: View {
                             .foregroundStyle(Palette.ink)
                     }
                     Text("Ganas 300 puntos por cada mes activo y 250 por cada amigo que se suscriba con tu código. Los puntos no son dinero ni una inversión.")
-                        .font(.footnote)
+                        .font(.k(.footnote))
                         .foregroundStyle(Palette.ink3)
                 }
                 .padding(.vertical, 4)
@@ -559,7 +559,7 @@ struct PointsSettings: View {
                     }
                     .buttonStyle(.borderless)
                 }
-                ShareLink(item: "Prueba Liminal, una IA en español a precio justo. Usa mi código \(store.state.referralCode).") {
+                ShareLink(item: "Prueba Kuolki, una IA en español a precio justo. Usa mi código \(store.state.referralCode).") {
                     Label("Compartir invitación", systemImage: "square.and.arrow.up")
                         .foregroundStyle(Palette.ink)
                 }
@@ -572,7 +572,7 @@ struct PointsSettings: View {
                             Text(entry.reason)
                                 .foregroundStyle(Palette.ink)
                             Text(entry.month)
-                                .font(.caption)
+                                .font(.k(.caption))
                                 .foregroundStyle(Palette.ink3)
                         }
                         Spacer()
@@ -779,7 +779,7 @@ struct ConnectorsSettings: View {
                             Text(kind.name)
                                 .foregroundStyle(Palette.ink)
                             Text(kind.note)
-                                .font(.caption)
+                                .font(.k(.caption))
                                 .foregroundStyle(Palette.ink3)
                         }
                         Spacer(minLength: 8)
@@ -787,7 +787,7 @@ struct ConnectorsSettings: View {
                             store.toggleConnector(kind)
                         }
                         .buttonStyle(.bordered)
-                        .font(.footnote)
+                        .font(.k(.footnote))
                     }
                 }
             } footer: {
@@ -800,7 +800,7 @@ struct ConnectorsSettings: View {
                         Text(connector.name)
                             .foregroundStyle(Palette.ink)
                         Text(connector.url)
-                            .font(.caption)
+                            .font(.k(.caption))
                             .foregroundStyle(Palette.ink3)
                     }
                     .swipeActions(edge: .trailing) {
@@ -904,13 +904,13 @@ struct PaymentSheet: View {
         Section {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Monto a pagar")
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
                 Text(Fmt.bolivares(store.amountInBolivares))
-                    .font(.title2.weight(.semibold))
+                    .font(.k(.title2).weight(.semibold))
                     .monospacedDigit()
                 Text("\(Fmt.money(store.planPrice)) × \(Fmt.bolivares(pay.rate)) · tasa oficial del \(pay.useEuroRate ? "euro" : "dólar") (BCV) del \(Fmt.day(pay.rateDate))")
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
             }
             .padding(.vertical, 4)
@@ -945,10 +945,10 @@ struct PaymentSheet: View {
         Section {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Monto exacto")
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
                 Text("\(Fmt.decimal2(store.planPrice)) \(coin)")
-                    .font(.title2.weight(.semibold))
+                    .font(.k(.title2).weight(.semibold))
                     .monospacedDigit()
             }
             .padding(.vertical, 4)
@@ -983,12 +983,12 @@ struct PaymentSheet: View {
         Section {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Total")
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
                 Text(Fmt.money(store.planPrice))
-                    .font(.title2.weight(.semibold))
+                    .font(.k(.title2).weight(.semibold))
                 Text("Débito o crédito, nacional o internacional")
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
             }
             .padding(.vertical, 4)
@@ -1001,7 +1001,7 @@ struct PaymentSheet: View {
                     .fontWeight(.semibold)
             }
         } footer: {
-            Text("Te llevamos a la página segura del procesador de pagos. Liminal nunca ve ni guarda los datos de tu tarjeta.")
+            Text("Te llevamos a la página segura del procesador de pagos. Kuolki nunca ve ni guarda los datos de tu tarjeta.")
         }
     }
 
@@ -1009,7 +1009,7 @@ struct PaymentSheet: View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
                 Text(value)
                     .foregroundStyle(Palette.ink)

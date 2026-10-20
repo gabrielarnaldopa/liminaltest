@@ -18,7 +18,7 @@ final class AppStore {
     var searchWeb = false
     /// Deep research for the next message.
     var research = false
-    /// Liminal Dev (the web version, inside the app).
+    /// Kuolki Dev (the web version, inside the app).
     var showDev = false
     /// Opens the connectors screen from the + menu.
     var showConnectors = false
@@ -39,7 +39,7 @@ final class AppStore {
     /// Another device signed this one out: the root view signs out.
     var signedOutRemotely = false
     /// How this device appears in the device list (set by the app with the real model name).
-    static var deviceName = "iPhone · app de Liminal"
+    static var deviceName = "iPhone · app de Kuolki"
 
     @ObservationIgnored private var streamTask: Task<Void, Never>? = nil
     @ObservationIgnored private var saveTask: Task<Void, Never>? = nil
@@ -1545,7 +1545,7 @@ final class AppStore {
         guard let i = state.users.firstIndex(where: { $0.id == userID }), !state.users[i].isAdmin else { return }
         if state.users[i].status == .suspendido {
             state.users[i].status = .activo
-            show("\(state.users[i].name) puede volver a usar Liminal")
+            show("\(state.users[i].name) puede volver a usar Kuolki")
         } else {
             state.users[i].status = .suspendido
             show("Suspendiste a \(state.users[i].name)")

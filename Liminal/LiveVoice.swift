@@ -73,11 +73,11 @@ final class LiveVoiceSession {
     func begin() async {
         guard phase == .starting else { return }
         guard await Self.microphoneAllowed() else {
-            fail("Liminal necesita el micrófono. Actívalo en Ajustes › Liminal › Micrófono.")
+            fail("Kuolki necesita el micrófono. Actívalo en Ajustes › Kuolki › Micrófono.")
             return
         }
         guard await Self.speechAllowed() else {
-            fail("Para hablar con Lithium, permite el reconocimiento de voz en Ajustes › Liminal.")
+            fail("Para hablar con Lithium, permite el reconocimiento de voz en Ajustes › Kuolki.")
             return
         }
         guard phase == .starting else { return }

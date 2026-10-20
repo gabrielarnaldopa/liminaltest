@@ -20,11 +20,11 @@ struct LoginView: View {
                 AssemblingLogo(size: 60)
                     .padding(.bottom, 22)
 
-                Text("Entra a Liminal")
-                    .font(.title.weight(.semibold))
+                Text("Entra a Kuolki")
+                    .font(.k(.title).weight(.semibold))
                     .foregroundStyle(Palette.ink)
                 Text("Tu IA en español, privada y a precio justo.")
-                    .font(.subheadline)
+                    .font(.k(.subheadline))
                     .foregroundStyle(Palette.ink3)
                     .multilineTextAlignment(.center)
                     .padding(.top, 6)
@@ -42,7 +42,7 @@ struct LoginView: View {
                         case .success:
                             store.show("Demostración: con el servidor conectado, aquí se crea o se abre tu cuenta.")
                         case .failure:
-                            store.show("Entrar con Apple necesita la cuenta de desarrollador de Apple y el servidor de Liminal.")
+                            store.show("Entrar con Apple necesita la cuenta de desarrollador de Apple y el servidor de Kuolki.")
                         }
                     }
                     .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
@@ -54,7 +54,7 @@ struct LoginView: View {
                         store.show("Demostración: con el servidor conectado se abre Google y entras sin contraseña.")
                     } label: {
                         Label("Continuar con Google", systemImage: "globe")
-                            .font(.body.weight(.semibold))
+                            .font(.k(.body).weight(.semibold))
                             .foregroundStyle(Palette.ink)
                             .frame(maxWidth: .infinity)
                             .frame(height: 46)
@@ -66,7 +66,7 @@ struct LoginView: View {
                     HStack(spacing: 10) {
                         Rectangle().fill(Palette.line).frame(height: 1)
                         Text("o con tu correo")
-                            .font(.caption)
+                            .font(.k(.caption))
                             .foregroundStyle(Palette.ink3)
                             .fixedSize()
                         Rectangle().fill(Palette.line).frame(height: 1)
@@ -123,10 +123,10 @@ struct LoginView: View {
                         Button("¿Olvidaste tu contraseña?") {
                             store.show("Pronto podrás recuperarla con un enlace a tu correo.")
                         }
-                        .font(.footnote)
+                        .font(.k(.footnote))
                         .foregroundStyle(Palette.ink2)
                     }
-                    .font(.subheadline)
+                    .font(.k(.subheadline))
                     .foregroundStyle(Palette.ink)
                     .padding(.bottom, 16)
 
@@ -135,7 +135,7 @@ struct LoginView: View {
                             Image(systemName: secondsLeft > 0 ? "lock.fill" : "exclamationmark.circle.fill")
                                 .foregroundStyle(Palette.red)
                             Text(secondsLeft > 0 ? AuthService.LoginError.locked(seconds: secondsLeft).message : error.message)
-                                .font(.footnote)
+                                .font(.k(.footnote))
                                 .foregroundStyle(Palette.redText)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -149,7 +149,7 @@ struct LoginView: View {
 
                     Button(action: submit) {
                         Text(secondsLeft > 0 ? "Espera \(secondsLeft) s" : "Entrar")
-                            .font(.body.weight(.semibold))
+                            .font(.k(.body).weight(.semibold))
                             .foregroundStyle(Palette.bg)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
@@ -176,11 +176,11 @@ struct LoginView: View {
                     .fontWeight(.semibold)
                     .foregroundStyle(Palette.ink)
                 }
-                .font(.subheadline)
+                .font(.k(.subheadline))
                 .padding(.top, 20)
 
                 Text("Versión de prueba. El acceso funciona solo en este dispositivo hasta conectar el servidor.")
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
                     .multilineTextAlignment(.center)
                     .padding(.top, 28)
@@ -218,7 +218,7 @@ struct LoginView: View {
 
     private func fieldLabel(_ text: String) -> some View {
         Text(text)
-            .font(.subheadline.weight(.medium))
+            .font(.k(.subheadline).weight(.medium))
             .foregroundStyle(Palette.ink2)
             .padding(.bottom, 6)
     }

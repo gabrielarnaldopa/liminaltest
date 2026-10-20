@@ -1,7 +1,7 @@
 import Foundation
 import ActivityKit
 
-/// What Liminal shows in the Dynamic Island and on the Lock Screen while Lithium works.
+/// What Kuolki shows in the Dynamic Island and on the Lock Screen while Lithium works.
 /// The app starts and updates it; the LiminalWidgets extension draws it.
 struct LiminalActivityAttributes: ActivityAttributes {
     enum Kind: String, Codable, Hashable {

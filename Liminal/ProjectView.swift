@@ -55,15 +55,15 @@ struct ProjectView: View {
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(project.name)
-                            .font(.title2.weight(.semibold))
+                            .font(.k(.title2).weight(.semibold))
                             .foregroundStyle(Palette.ink)
                         if !project.desc.isEmpty {
                             Text(project.desc)
-                                .font(.subheadline)
+                                .font(.k(.subheadline))
                                 .foregroundStyle(Palette.ink3)
                         }
                         Text("Creado \(Fmt.relative(project.created))")
-                            .font(.caption)
+                            .font(.k(.caption))
                             .foregroundStyle(Palette.ink3)
                     }
                     Spacer(minLength: 0)
@@ -71,8 +71,8 @@ struct ProjectView: View {
 
                 // Instructions
                 Card(title: "Instrucciones") {
-                    Text("Liminal las sigue en todos los chats de este proyecto.")
-                        .font(.footnote)
+                    Text("Kuolki las sigue en todos los chats de este proyecto.")
+                        .font(.k(.footnote))
                         .foregroundStyle(Palette.ink3)
                     TextEditor(text: instructionsBinding)
                         .frame(minHeight: 110)
@@ -86,15 +86,15 @@ struct ProjectView: View {
                 // Files
                 Card(title: "Archivos") {
                     if project.files.isEmpty {
-                        Text("Agrega catálogos, apuntes o listas de precios. Liminal los usa como contexto.")
-                            .font(.footnote)
+                        Text("Agrega catálogos, apuntes o listas de precios. Kuolki los usa como contexto.")
+                            .font(.k(.footnote))
                             .foregroundStyle(Palette.ink3)
                     }
                     ForEach(project.files) { file in
                         HStack(spacing: 10) {
                             AttachmentChip(name: file.name)
                             Text(file.size)
-                                .font(.caption)
+                                .font(.k(.caption))
                                 .foregroundStyle(Palette.ink3)
                             Spacer(minLength: 0)
                             Button {
@@ -111,7 +111,7 @@ struct ProjectView: View {
                         importing = true
                     } label: {
                         Label("Agregar archivo", systemImage: "plus")
-                            .font(.subheadline.weight(.medium))
+                            .font(.k(.subheadline).weight(.medium))
                             .foregroundStyle(Palette.ink)
                     }
                     .buttonStyle(.plain)
@@ -121,7 +121,7 @@ struct ProjectView: View {
                 Card(title: chats.isEmpty ? "Chats" : "Chats (\(chats.count))") {
                     if chats.isEmpty {
                         Text("Todavía no hay chats. Escribe abajo para empezar el primero.")
-                            .font(.footnote)
+                            .font(.k(.footnote))
                             .foregroundStyle(Palette.ink3)
                     }
                     ForEach(chats) { chat in
@@ -137,12 +137,12 @@ struct ProjectView: View {
                                         .foregroundStyle(Palette.ink)
                                         .lineLimit(1)
                                     Text("\(Fmt.relative(chat.updated)) · \(chat.messages.count) mensajes")
-                                        .font(.caption)
+                                        .font(.k(.caption))
                                         .foregroundStyle(Palette.ink3)
                                 }
                                 Spacer(minLength: 0)
                                 Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.semibold))
+                                    .font(.k(.caption).weight(.semibold))
                                     .foregroundStyle(Palette.ink3)
                             }
                             .padding(.vertical, 6)

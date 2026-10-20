@@ -112,10 +112,10 @@ struct PercentMeter: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(title).font(.subheadline.weight(.medium))
+                Text(title).font(.k(.subheadline).weight(.medium))
                 Spacer()
                 Text(percent > 0 && percent < 1 ? "<1% usado" : "\(Int(percent))% usado")
-                    .font(.subheadline).foregroundStyle(Palette.ink2)
+                    .font(.k(.subheadline)).foregroundStyle(Palette.ink2)
             }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -125,7 +125,7 @@ struct PercentMeter: View {
                 }
             }
             .frame(height: 6)
-            Text(detail).font(.caption).foregroundStyle(Palette.ink3)
+            Text(detail).font(.k(.caption)).foregroundStyle(Palette.ink3)
         }
         .padding(.vertical, 4)
     }
@@ -171,9 +171,9 @@ struct WidgetBlockView: View {
     }
 }
 
-// MARK: - Liminal Dev on the iPhone
+// MARK: - Kuolki Dev on the iPhone
 
-/// Liminal Dev runs as the web app does (projects, editor, preview, the agent), opened here with this
+/// Kuolki Dev runs as the web app does (projects, editor, preview, the agent), opened here with this
 /// account and this server, so nothing has to be typed again.
 struct DevWebSheet: View {
     @Environment(AppStore.self) private var store
@@ -200,7 +200,7 @@ struct DevWebSheet: View {
                 } else {
                     Form {
                         Section {
-                            Text("Liminal Dev usa la app web que publicaste en GitHub Pages. Pega su dirección una vez y se abre aquí con tu cuenta y tu servidor.")
+                            Text("Kuolki Dev usa la app web que publicaste en GitHub Pages. Pega su dirección una vez y se abre aquí con tu cuenta y tu servidor.")
                                 .foregroundStyle(Palette.ink2)
                             TextField("https://tuusuario.github.io/liminal/", text: $address)
                                 .textInputAutocapitalization(.never)
@@ -218,7 +218,7 @@ struct DevWebSheet: View {
                     }
                 }
             }
-            .navigationTitle("Liminal Dev")
+            .navigationTitle("Kuolki Dev")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

@@ -1,4 +1,4 @@
-# Liminal para iOS
+# Kuolki para iOS
 
 App de chat en SwiftUI (iOS 17 o superior): inicio de sesión de administración, chats con modos y esfuerzo, proyectos, carpetas, ajustes, privacidad, plan y pagos, puntos y panel de administración. Interfaz en gris claro y oscuro; verde, amarillo y rojo de macOS solo para estados.
 
@@ -9,7 +9,7 @@ App de chat en SwiftUI (iOS 17 o superior): inicio de sesión de administración
 - Navegador integrado, comandos con «/», lista de dispositivos conectados.
 - Las respuestas siguen en el servidor aunque cierres la app, y te llega un aviso al terminar.
 - Pago por región: Pago Móvil solo en Venezuela (se elige solo); en otros países, tarjeta y USDT/USDC.
-- Liminal Dev en el iPhone: se abre desde la barra lateral (o con /dev) y usa la app web que publicaste, ya con tu cuenta y tu servidor. La primera vez pega la dirección de GitHub Pages.
+- Kuolki Dev en el iPhone: se abre desde la barra lateral (o con /dev) y usa la app web que publicaste, ya con tu cuenta y tu servidor. La primera vez pega la dirección de GitHub Pages.
 - Fotos: Lithium entiende recibos, tareas, documentos y capturas (el servidor necesita VISION_API_KEY).
 - Investigación a fondo (con /investigar o en el menú +), gráficos y calculadoras dentro de las respuestas.
 - El uso se mide en tokens y se muestra en porcentaje: la sesión de 5 horas y la semana.
@@ -29,24 +29,24 @@ El .ipa solo se puede compilar con Xcode en una Mac. Dos caminos:
 **Con tu Mac**
 
 1. En Xcode, elige **Any iOS Device (arm64)** y pulsa **Product › Build**.
-2. En **Product › Show Build Folder in Finder**, entra a `Products/Debug-iphoneos` y copia `Liminal.app`.
-3. Crea una carpeta llamada `Payload`, mete `Liminal.app` adentro, comprime la carpeta y cambia `Payload.zip` por `Liminal.ipa`.
+2. En **Product › Show Build Folder in Finder**, entra a `Products/Debug-iphoneos` y copia `Liminal.app` (el proyecto conserva su nombre interno; en el iPhone se llama Kuolki).
+3. Crea una carpeta llamada `Payload`, mete `Liminal.app` adentro, comprime la carpeta y cambia `Payload.zip` por `Kuolki.ipa`.
 
 **Sin Mac, con GitHub (gratis)**
 
 1. Sube esta carpeta a un repositorio de GitHub.
 2. En la pestaña **Actions**, abre **Compilar IPA** y pulsa **Run workflow**.
-3. Cuando termine (unos 5 minutos), descarga **Liminal-ipa** al final de la página.
+3. Cuando termine (unos 5 minutos), descarga **Kuolki-ipa** al final de la página.
 
 **Instalar con AltServer**
 
 1. Abre AltServer en tu computadora con el iPhone conectado por cable.
-2. Desde AltStore en el iPhone, toca **+** y elige `Liminal.ipa`.
+2. Desde AltStore en el iPhone, toca **+** y elige `Kuolki.ipa`.
 3. Con un Apple ID gratis, la app dura 7 días: renuévala desde AltStore.
 
 ## Respuestas reales con DeepSeek
 
-- La clave de DeepSeek nunca va en la app: va en el servidor de Lithium (carpeta `Liminal-Servidor`, un Worker de Cloudflare gratis). Sigue su `LEEME.md`.
+- La clave de DeepSeek nunca va en la app: va en el servidor de Lithium (carpeta `Kuolki-Servidor`, un Worker de Cloudflare gratis). Sigue su `LEEME.md`.
 - Luego, en la app: **Administración › Planes › Servidor de Lithium 1.1**, pega la dirección del servidor y la clave de la app, pulsa **Probar conexión** y **Guardar cambios**.
 - Con el servidor, las respuestas llegan poco a poco, el modo avanzado muestra su razonamiento real y la conversación en vivo responde con Lithium. Sin servidor, la app sigue con respuestas de demostración.
 - La búsqueda en internet y la lectura de Word todavía no pasan por el servidor.
@@ -67,7 +67,7 @@ El .ipa solo se puede compilar con Xcode en una Mac. Dos caminos:
 - Mientras Lithium crea una imagen o un video, o piensa una respuesta larga en modo avanzado, ves el avance en la Isla Dinámica (iPhone 14 Pro y más nuevos) o en la pantalla bloqueada (todos los iPhone con iOS 17). Al terminar, tocas el aviso y se abre ese chat.
 - Durante la conversación en vivo, la Isla Dinámica muestra si Lithium te escucha, piensa o habla, con botones para pausar el micrófono o terminar sin abrir la app.
 - Verde: escuchando, hablando o listo. Amarillo: trabajando. Rojo: en pausa o cancelado.
-- Se apaga en **Ajustes › Voz e Isla Dinámica** (o en Ajustes del iPhone › Liminal).
+- Se apaga en **Ajustes › Voz e Isla Dinámica** (o en Ajustes del iPhone › Kuolki).
 - Por ahora la app actualiza el aviso mientras sigue abierta o recién cerrada. Con el servidor, las actualizaciones llegarán por notificaciones push aunque la app esté cerrada.
 - Va en una extensión aparte (`LiminalWidgets`), que AltStore firma junto con la app. Con un Apple ID gratis, cuenta como un segundo App ID (el límite es 10 por semana).
 
@@ -80,7 +80,7 @@ El .ipa solo se puede compilar con Xcode en una Mac. Dos caminos:
 ## Imágenes y video
 
 - Se pagan con créditos: 100 al mes en el plan mensual. Una imagen usa 1 crédito y un video de 5 segundos (720p), 5.
-- Un crédito le cuesta a Liminal unos $0,021 con el proveedor. Aunque alguien use todo, el peor caso es $2,02 de texto más $2,10 de imágenes y video: $4,12 de los $4,40 de presupuesto, así que se mantiene el 60% de margen.
+- Un crédito le cuesta a Kuolki unos $0,021 con el proveedor. Aunque alguien use todo, el peor caso es $2,02 de texto más $2,10 de imágenes y video: $4,12 de los $4,40 de presupuesto, así que se mantiene el 60% de margen.
 - Paquete extra: 100 créditos por $6.
 - Los créditos, su costo y el precio se ajustan en Administración › Planes, y la app avisa si el peor caso deja de caber.
 - Por ahora las imágenes y los videos son vistas previas de demostración: se vuelven reales al conectar el servidor.
@@ -98,12 +98,12 @@ El .ipa solo se puede compilar con Xcode en una Mac. Dos caminos:
 ## Inicio de sesión con Apple y Google
 
 - El botón de Apple es el oficial de Apple. Para que funcione necesitas la cuenta de desarrollador de Apple de pago y activar «Sign in with Apple» en Signing & Capabilities; con un Apple ID gratis (AltServer) el botón se ve, pero avisa que falta.
-- El botón de Google necesita el SDK de Google Sign-In y el servidor de Liminal. Por ahora muestra un aviso.
+- El botón de Google necesita el SDK de Google Sign-In y el servidor de Kuolki. Por ahora muestra un aviso.
 
 ## Pagos
 
 - **Pago Móvil** en bolívares a la tasa oficial del euro del BCV (o la del dólar, si la cambias en Administración › Planes › Cobros). Con la tasa del 14 de octubre de 2026 (Bs 982,76 por euro), el plan de $11 queda en Bs 10.810,36.
-- **USDT** (Tron o Solana), **USDC** (Base o Solana) y **tarjeta** (en la página segura del procesador; Liminal nunca ve la tarjeta).
+- **USDT** (Tron o Solana), **USDC** (Base o Solana) y **tarjeta** (en la página segura del procesador; Kuolki nunca ve la tarjeta).
 - Los pagos quedan pendientes y se aprueban o rechazan en Administración › Pagos. Configura ahí tus datos de Pago Móvil y tus direcciones antes de cobrar.
 - El servidor debe actualizar la tasa cada día desde el BCV.
 

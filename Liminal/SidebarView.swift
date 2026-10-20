@@ -33,7 +33,7 @@ struct SidebarView: View {
                     navRow("Nuevo chat", icon: "square.and.pencil", selected: store.route == .home) {
                         store.newChat()
                     }
-                    navRow("Liminal Dev", icon: "chevron.left.forwardslash.chevron.right", selected: false) {
+                    navRow("Kuolki Dev", icon: "chevron.left.forwardslash.chevron.right", selected: false) {
                         store.showDev = true
                     }
                     if auth.session?.isAdmin == true {
@@ -90,7 +90,7 @@ struct SidebarView: View {
                 Section("Resultados") {
                     if searchResults.isEmpty {
                         Text("No hay chats que coincidan con «\(search)».")
-                            .font(.subheadline)
+                            .font(.k(.subheadline))
                             .foregroundStyle(Palette.ink3)
                             .listRowBackground(Color.clear)
                     }
@@ -103,7 +103,7 @@ struct SidebarView: View {
         .listStyle(.sidebar)
         .liminalList()
         .searchable(text: $search, prompt: "Buscar chats")
-        .navigationTitle("Liminal")
+        .navigationTitle("Kuolki")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 LogoMark()
@@ -186,7 +186,7 @@ struct SidebarView: View {
                     .lineLimit(1)
                 Spacer(minLength: 4)
                 Text("\(count)")
-                    .font(.caption)
+                    .font(.k(.caption))
                     .monospacedDigit()
                     .foregroundStyle(Palette.ink3)
             }
@@ -204,7 +204,7 @@ struct SidebarView: View {
         return DisclosureGroup(isExpanded: expandedBinding(folder.id)) {
             if chats.isEmpty {
                 Text("Vacía. Mueve un chat aquí desde su menú.")
-                    .font(.footnote)
+                    .font(.k(.footnote))
                     .foregroundStyle(Palette.ink3)
                     .listRowBackground(Color.clear)
             }
@@ -326,7 +326,7 @@ struct SidebarView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
                             Text(name)
-                                .font(.subheadline.weight(.semibold))
+                                .font(.k(.subheadline).weight(.semibold))
                                 .foregroundStyle(Palette.ink)
                                 .lineLimit(1)
                             if auth.session?.isAdmin == true {
@@ -334,7 +334,7 @@ struct SidebarView: View {
                             }
                         }
                         Text("Plan \(store.state.prefs.plan.name.lowercased())")
-                            .font(.caption)
+                            .font(.k(.caption))
                             .foregroundStyle(Palette.ink3)
                     }
                     Spacer(minLength: 4)

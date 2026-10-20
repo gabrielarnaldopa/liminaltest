@@ -29,7 +29,7 @@ enum Seed {
         let chats: [Chat] = [
             Chat(title: "Qué es una stablecoin", mode: .general, updated: now.addingTimeInterval(-28 * 60), messages: [
                 user("¿Qué es una stablecoin? Explícamelo fácil."),
-                bot("Es una criptomoneda que intenta valer siempre lo mismo que un dólar.\n\n- **Para qué sirve:** guardar y enviar dólares digitales sin un banco de por medio.\n- **Ejemplos:** USDT y USDC.\n- **El riesgo:** depende de que la empresa que la emite tenga de verdad los dólares que la respaldan.\n\nEn Liminal puedes pagar tu plan con USDT o USDC.")
+                bot("Es una criptomoneda que intenta valer siempre lo mismo que un dólar.\n\n- **Para qué sirve:** guardar y enviar dólares digitales sin un banco de por medio.\n- **Ejemplos:** USDT y USDC.\n- **El riesgo:** depende de que la empresa que la emite tenga de verdad los dólares que la respaldan.\n\nEn Kuolki puedes pagar tu plan con USDT o USDC.")
             ]),
             Chat(title: "Descripciones para vestidos de lino", mode: .emprendedor, projectID: tienda.id, updated: now.addingTimeInterval(-2 * hour), messages: [
                 user("Escríbeme 3 descripciones cortas para Instagram de vestidos de lino de verano. Precio: $18."),
@@ -96,7 +96,7 @@ enum Seed {
         return AppState(
             version: 1,
             prefs: Prefs(name: name, language: "es-419", tone: .cercano,
-                         custom: "Estoy construyendo Liminal, una IA en español para Latinoamérica. Respóndeme corto y con ejemplos.",
+                         custom: "Estoy construyendo Kuolki, una IA en español para Latinoamérica. Respóndeme corto y con ejemplos.",
                          theme: .system, fontScale: .normal, tier: .adv, effort: .medio, engine: .deepseek,
                          defaultMode: .general, showThinking: true, saveHistory: true, tempDefault: false,
                          memory: true, network: .tron, plan: .mensual),
@@ -113,7 +113,7 @@ enum Seed {
                 PointsEntry(month: "ago 2026", reason: "Mes activo", points: 300)
             ],
             memories: [
-                Memory(text: "Está construyendo Liminal, una IA para Latinoamérica.", category: .negocio),
+                Memory(text: "Está construyendo Kuolki, una IA para Latinoamérica.", category: .negocio),
                 Memory(text: "El plan cuesta $11 al mes y se paga con USDT, USDC, tarjeta o Pago Móvil.", category: .negocio),
                 Memory(text: "Prefiere respuestas cortas y con ejemplos.", category: .preferencias)
             ],

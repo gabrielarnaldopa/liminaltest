@@ -142,7 +142,7 @@ struct LithiumClient: Sendable {
         request.httpMethod = "POST"
         request.timeoutInterval = 20
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(key, forHTTPHeaderField: "X-Liminal-Key")
+        request.setValue(key, forHTTPHeaderField: "X-Kuolki-Key")
         request.httpBody = try? JSONEncoder().encode(body)
         let (data, response) = try await URLSession.shared.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -158,7 +158,7 @@ struct LithiumClient: Sendable {
         request.httpMethod = "POST"
         request.timeoutInterval = 300
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(key, forHTTPHeaderField: "X-Liminal-Key")
+        request.setValue(key, forHTTPHeaderField: "X-Kuolki-Key")
         request.httpBody = try? JSONEncoder().encode(body)
         return request
     }
@@ -166,7 +166,7 @@ struct LithiumClient: Sendable {
     private func getRequest(_ path: String) -> URLRequest {
         var request = URLRequest(url: base.appendingPathComponent(path))
         request.timeoutInterval = 300
-        request.setValue(key, forHTTPHeaderField: "X-Liminal-Key")
+        request.setValue(key, forHTTPHeaderField: "X-Kuolki-Key")
         return request
     }
 

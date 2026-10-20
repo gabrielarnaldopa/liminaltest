@@ -2,7 +2,7 @@ import Foundation
 import ActivityKit
 import UIKit
 
-/// Starts, updates and ends Liminal's Live Activity: the Dynamic Island on iPhones that have it
+/// Starts, updates and ends Kuolki's Live Activity: the Dynamic Island on iPhones that have it
 /// (14 Pro and newer) and the Lock Screen on every iPhone. Only one runs at a time.
 @MainActor
 final class LiveActivityController {
@@ -27,7 +27,7 @@ final class LiveActivityController {
         isOn && systemAllows
     }
 
-    /// The switch in Ajustes del iPhone › Liminal › Actividades en vivo.
+    /// The switch in Ajustes del iPhone › Kuolki › Actividades en vivo.
     var systemAllows: Bool {
         ActivityAuthorizationInfo().areActivitiesEnabled
     }

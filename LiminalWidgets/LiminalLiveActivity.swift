@@ -86,7 +86,7 @@ struct MarkIcon: View {
         LogoMark()
             .fill(color)
             .frame(width: size, height: size)
-            .accessibilityLabel("Liminal")
+            .accessibilityLabel("Kuolki")
     }
 }
 
@@ -250,7 +250,7 @@ struct StatusIcon: View {
 
 // MARK: - Colors
 
-/// Liminal's grays, with the macOS traffic lights only for status.
+/// Kuolki's grays, with the macOS traffic lights only for status.
 enum Tone {
     static let green = Color(red: 0x28 / 255, green: 0xC8 / 255, blue: 0x40 / 255)
     static let yellow = Color(red: 0xFE / 255, green: 0xBC / 255, blue: 0x2E / 255)

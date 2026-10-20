@@ -34,7 +34,7 @@ struct ToolStepsView: View {
                         Text(step.label).lineLimit(1).shimmering(step.isBusy)
                     }
                 }
-                .font(.footnote)
+                .font(.k(.footnote))
                 .foregroundStyle(step.status == "denied" || step.status == "error" ? Palette.ink3 : Palette.ink2)
             }
         }
@@ -50,11 +50,11 @@ struct AskCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(ask.title)
-                .font(.subheadline.weight(.semibold))
+                .font(.k(.subheadline).weight(.semibold))
                 .foregroundStyle(Palette.ink)
             ForEach(ask.items) { item in
                 Label(item.isSearch ? "«\(item.query)»" : item.url, systemImage: item.isSearch ? "magnifyingglass" : "globe")
-                    .font(.caption)
+                    .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
                     .lineLimit(2)
             }
@@ -65,7 +65,7 @@ struct AskCardView: View {
             }
             .padding(.top, 4)
             Button("Navegar siempre sin preguntar", action: onAuto)
-                .font(.caption.weight(.medium))
+                .font(.k(.caption).weight(.medium))
                 .foregroundStyle(Palette.ink2)
                 .buttonStyle(.borderless)
         }
@@ -78,7 +78,7 @@ struct AskCardView: View {
     private func answerButton(_ title: String, primary: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.footnote.weight(.semibold))
+                .font(.k(.footnote).weight(.semibold))
                 .foregroundStyle(primary ? Palette.bg : Palette.ink)
                 .padding(.horizontal, 12)
                 .frame(height: 34)
@@ -97,7 +97,7 @@ struct LinkSourcesView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Fuentes")
-                .font(.caption)
+                .font(.k(.caption))
                 .foregroundStyle(Palette.ink3)
             FlowLayout(spacing: 6) {
                 ForEach(links, id: \.url) { link in
@@ -106,7 +106,7 @@ struct LinkSourcesView: View {
                             onOpen(url)
                         } label: {
                             Label(link.host, systemImage: "globe")
-                                .font(.caption)
+                                .font(.k(.caption))
                                 .foregroundStyle(Palette.ink2)
                                 .padding(.horizontal, 9)
                                 .padding(.vertical, 4)
@@ -150,17 +150,17 @@ struct ArtifactCard: View {
                     .frame(width: 44, height: 44)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(doc.title)
-                            .font(.subheadline.weight(.semibold))
+                            .font(.k(.subheadline).weight(.semibold))
                             .foregroundStyle(Palette.ink)
                             .lineLimit(1)
                         Text(subtitle)
-                            .font(.caption)
+                            .font(.k(.caption))
                             .foregroundStyle(Palette.ink3)
                     }
                     Spacer(minLength: 8)
                     if !isPDF {
                         Text(writing ? "Ver código" : "Abrir")
-                            .font(.footnote.weight(.semibold))
+                            .font(.k(.footnote).weight(.semibold))
                             .foregroundStyle(writing ? Palette.ink2 : Palette.bg)
                             .padding(.horizontal, 14)
                             .frame(height: 34)
@@ -181,7 +181,7 @@ struct ArtifactCard: View {
                         }
                         Text("PDF")
                     }
-                    .font(.footnote.weight(.semibold))
+                    .font(.k(.footnote).weight(.semibold))
                     .foregroundStyle(Palette.bg)
                     .padding(.horizontal, 14)
                     .frame(height: 34)
@@ -231,10 +231,10 @@ struct ArtifactView: View {
                     .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(doc.title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(.k(.subheadline).weight(.semibold))
                         .lineLimit(1)
                     Text("\(doc.kindName) · \(doc.lines) líneas")
-                        .font(.caption)
+                        .font(.k(.caption))
                         .foregroundStyle(Palette.ink3)
                 }
                 Spacer(minLength: 8)
@@ -248,7 +248,7 @@ struct ArtifactView: View {
                     dismiss()
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.body.weight(.semibold))
+                        .font(.k(.body).weight(.semibold))
                 }
                 .accessibilityLabel("Cerrar")
             }
@@ -413,7 +413,7 @@ struct BrowserView: View {
                     .submitLabel(.go)
                     .focused($editing)
                     .onSubmit(go)
-                    .font(.subheadline)
+                    .font(.k(.subheadline))
                     .padding(.horizontal, 12)
                     .frame(height: 36)
                     .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -448,7 +448,7 @@ struct BrowserView: View {
                 }
                 .accessibilityLabel("Más opciones")
             }
-            .font(.body.weight(.medium))
+            .font(.k(.body).weight(.medium))
             .foregroundStyle(Palette.ink)
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
@@ -460,12 +460,12 @@ struct BrowserView: View {
             } else {
                 VStack(spacing: 10) {
                     Image(systemName: "safari")
-                        .font(.largeTitle)
+                        .font(.k(.largeTitle))
                         .foregroundStyle(Palette.ink3)
-                    Text("Navegador de Liminal")
-                        .font(.headline)
+                    Text("Navegador de Kuolki")
+                        .font(.k(.headline))
                     Text("Escribe una dirección arriba o toca un enlace en cualquier respuesta.")
-                        .font(.subheadline)
+                        .font(.k(.subheadline))
                         .foregroundStyle(Palette.ink3)
                         .multilineTextAlignment(.center)
                     Button("Cerrar") { dismiss() }
@@ -511,7 +511,7 @@ struct SlashSuggestions: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Comandos")
-                .font(.caption)
+                .font(.k(.caption))
                 .foregroundStyle(Palette.ink3)
                 .padding(.horizontal, 12)
                 .padding(.top, 8)
@@ -530,7 +530,7 @@ struct SlashSuggestions: View {
                                     .font(.system(.subheadline, design: .monospaced).weight(.medium))
                                     .foregroundStyle(Palette.ink)
                                 Text(command.title)
-                                    .font(.subheadline)
+                                    .font(.k(.subheadline))
                                     .foregroundStyle(Palette.ink3)
                                     .lineLimit(1)
                                 Spacer(minLength: 0)
@@ -610,7 +610,7 @@ struct NavigationSettings: View {
                     Label("Abrir el navegador", systemImage: "safari")
                 }
             } footer: {
-                Text("Los enlaces de las respuestas se abren dentro de Liminal.")
+                Text("Los enlaces de las respuestas se abren dentro de Kuolki.")
             }
         }
         .liminalList()
@@ -643,14 +643,14 @@ struct DevicesSection: View {
                             Text(device.current ? "\(device.name) · este dispositivo" : device.name)
                                 .foregroundStyle(Palette.ink)
                             Text(subtitle(device))
-                                .font(.caption)
+                                .font(.k(.caption))
                                 .foregroundStyle(Palette.ink3)
                         }
                         Spacer(minLength: 8)
                         if !device.current {
                             Button("Cerrar sesión") { target = device }
                                 .buttonStyle(.borderless)
-                                .font(.footnote.weight(.semibold))
+                                .font(.k(.footnote).weight(.semibold))
                         }
                     }
                 }
