@@ -162,34 +162,39 @@ struct ProjectView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .background(Palette.bg)
-        .safeAreaInset(edge: .bottom) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             ComposerView(placeholder: "Nuevo chat en \(project.name)")
         }
-        .liminalToolbar(showsTemporary: false)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        showEditor = true
-                    } label: {
-                        Label("Editar proyecto", systemImage: "pencil")
-                    }
-                    Button {
-                        importing = true
-                    } label: {
-                        Label("Agregar archivo", systemImage: "doc.badge.plus")
-                    }
-                    Divider()
-                    Button(role: .destructive) {
-                        confirmDelete = true
-                    } label: {
-                        Label("Eliminar proyecto", systemImage: "trash")
-                    }
+        .topBar {
+            ModelMenu()
+        } trailing: {
+            Menu {
+                Button {
+                    showEditor = true
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Label("Editar proyecto", systemImage: "pencil")
                 }
-                .accessibilityLabel("Opciones del proyecto")
+                Button {
+                    importing = true
+                } label: {
+                    Label("Agregar archivo", systemImage: "doc.badge.plus")
+                }
+                Divider()
+                Button(role: .destructive) {
+                    confirmDelete = true
+                } label: {
+                    Label("Eliminar proyecto", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                    .frame(width: 46, height: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Opciones del proyecto")
+            BarDivider()
+            BarButton(icon: "square.and.pencil", label: "Nuevo chat") { store.newChat() }
         }
     }
 

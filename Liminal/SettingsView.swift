@@ -43,8 +43,8 @@ struct SettingsView: View {
                 }
 
                 Section {
-                    settingsLink("Plan y pagos", icon: "creditcard") { PlanSettings() }
-                    settingsLink("Puntos de fundador", icon: "star") { PointsSettings() }
+                    settingsLink("Plan y pagos", icon: "creditcard", flame: true) { PlanSettings() }
+                    settingsLink("Puntos de fundador", icon: "star.fill", flame: true) { PointsSettings() }
                 }
 
                 Section {
@@ -66,14 +66,25 @@ struct SettingsView: View {
         store.state.prefs.name.isEmpty ? (auth.session?.name ?? "Tú") : store.state.prefs.name
     }
 
-    private func settingsLink<Destination: View>(_ title: String, icon: String,
+    private func settingsLink<Destination: View>(_ title: String, icon: String, flame: Bool = false,
                                                  @ViewBuilder destination: () -> Destination) -> some View {
         let page = destination()
         return NavigationLink {
             page
         } label: {
-            Label(title, systemImage: icon)
-                .foregroundStyle(Palette.ink)
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(flame ? AnyShapeStyle(Palette.accentGradient) : AnyShapeStyle(Color(hex: 0x636366)))
+                    }
+                Text(title)
+                    .foregroundStyle(Palette.ink)
+            }
+            .padding(.vertical, 2)
         }
     }
 }

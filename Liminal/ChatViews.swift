@@ -11,66 +11,90 @@ struct HomeView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 22) {
-                Spacer(minLength: 36)
-                AssemblingLogo(size: 48)
-                VStack(spacing: 6) {
-                    Text("\(store.greeting), \(firstName)")
-                        .font(.k(.title).weight(.semibold))
-                        .foregroundStyle(Palette.ink)
-                    Text(subtitle)
-                        .font(.k(.body))
-                        .foregroundStyle(Palette.ink3)
-                }
-                .multilineTextAlignment(.center)
+            VStack(spacing: 0) {
+                AssemblingLogo(size: 54)
+                    .padding(.top, 34)
+                Text("\(store.greeting), \(firstName)")
+                    .font(.k(.title).weight(.semibold))
+                    .foregroundStyle(Palette.ink)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                    .padding(.top, 16)
 
                 if store.isTemporary {
-                    Label("Chat temporal: no se guarda en tu historial ni en la memoria.", systemImage: "eye.slash")
+                    Label("Chat temporal: no se guarda en tu historial ni en la memoria.", systemImage: "hourglass")
                         .font(.k(.footnote))
                         .foregroundStyle(Palette.yellowText)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                         .background(Palette.yellowTint, in: Capsule())
+                        .padding(.top, 12)
                 }
 
-                FlowLayout(spacing: 8) {
+                ComposerView(placeholder: placeholder, docked: false)
+                    .padding(.top, 22)
+
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
                     ForEach(ChatMode.allCases.filter { $0 != .general }) { mode in
-                        ModeChip(mode: mode, selected: store.mode == mode) {
+                        ModeCard(mode: mode, selected: store.mode == mode) {
                             store.pick(mode: mode)
                         }
                     }
                 }
+                .padding(.top, 22)
 
                 if store.mode != .general {
                     Text("Modo \(store.mode.name): \(store.mode.summary)")
                         .font(.k(.footnote))
                         .foregroundStyle(Palette.ink3)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 12)
                         .transition(.opacity)
                 }
 
                 LimitNotice()
+                    .padding(.top, 12)
+
+                Text("Kuolki puede equivocarse. Revisa lo importante.")
+                    .font(.k(.caption2))
+                    .foregroundStyle(Palette.ink3)
+                    .padding(.top, 18)
             }
             .animation(.easeInOut(duration: 0.2), value: store.mode)
             .frame(maxWidth: 640)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 24)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 28)
             .frame(maxWidth: .infinity)
         }
         .scrollDismissesKeyboard(.interactively)
-        .background(Palette.bg)
-        .safeAreaInset(edge: .bottom) {
-            ComposerView(placeholder: store.mode == .general ? "Escribe tu mensaje" : "Escribe en modo \(store.mode.name)")
+        .background(alignment: .top) {
+            ZStack(alignment: .top) {
+                Palette.bg
+                Aura().frame(height: 420).offset(y: 30)
+            }
+            .ignoresSafeArea()
         }
-        .liminalToolbar()
+        .topBar {
+            ModelMenu()
+        } trailing: {
+            BarButton(icon: store.isTemporary ? "hourglass.circle.fill" : "hourglass",
+                      label: store.isTemporary ? "Desactivar chat temporal" : "Activar chat temporal",
+                      tint: store.isTemporary ? Palette.yellowText : Palette.ink) {
+                store.toggleTemporary()
+            }
+            BarDivider()
+            BarButton(icon: "square.and.pencil", label: "Nuevo chat") { store.newChat() }
+        }
+    }
+
+    private var placeholder: String {
+        store.mode == .general ? "¿En qué te ayudo hoy?" : "Escribe en modo \(store.mode.name)"
     }
 
     private var firstName: String {
         let name = store.state.prefs.name.isEmpty ? (auth.session?.name ?? "") : store.state.prefs.name
         return name.split(separator: " ").first.map(String.init) ?? name
-    }
-
-    private var subtitle: String {
-        "¿En qué te ayudo hoy?"
     }
 }
 
@@ -93,7 +117,7 @@ struct ChatView: View {
         let messages = chat?.messages ?? []
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 22) {
+                LazyVStack(alignment: .leading, spacing: 20) {
                     if chat?.isTemporary == true {
                         NoticeView(level: .warn, text: "Chat temporal: no se guarda en tu historial y desaparece al salir.")
                     }
@@ -108,8 +132,9 @@ struct ChatView: View {
                         .onDisappear { atBottom = false }
                 }
                 .frame(maxWidth: 720)
-                .padding(.horizontal, 18)
-                .padding(.vertical, 20)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 16)
                 .frame(maxWidth: .infinity)
             }
             .defaultScrollAnchor(.bottom)
@@ -131,44 +156,49 @@ struct ChatView: View {
             store.browser = BrowserTarget(url: url)
             return .handled
         })
-        .safeAreaInset(edge: .bottom) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             ComposerView(placeholder: "Responde a Kuolki")
         }
-        .liminalToolbar()
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    if let chat {
-                        Button {
-                            store.togglePin(chatID)
-                        } label: {
-                            Label(chat.pinned ? "Quitar de fijados" : "Fijar", systemImage: chat.pinned ? "pin.slash" : "pin")
-                        }
-                        .disabled(chat.isTemporary)
-                        Button {
-                            newTitle = chat.title
-                            showRename = true
-                        } label: {
-                            Label("Renombrar", systemImage: "pencil")
-                        }
-                        Button {
-                            moveTarget = IDBox(id: chatID)
-                        } label: {
-                            Label("Mover a proyecto o carpeta", systemImage: "folder")
-                        }
-                        .disabled(chat.isTemporary)
-                        Divider()
-                        Button(role: .destructive) {
-                            confirmDelete = true
-                        } label: {
-                            Label("Eliminar chat", systemImage: "trash")
-                        }
+        .topBar {
+            ModelMenu()
+        } trailing: {
+            Menu {
+                if let chat {
+                    Button {
+                        store.togglePin(chatID)
+                    } label: {
+                        Label(chat.pinned ? "Quitar de fijados" : "Fijar", systemImage: chat.pinned ? "pin.slash" : "pin")
                     }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
+                    .disabled(chat.isTemporary)
+                    Button {
+                        newTitle = chat.title
+                        showRename = true
+                    } label: {
+                        Label("Renombrar", systemImage: "pencil")
+                    }
+                    Button {
+                        moveTarget = IDBox(id: chatID)
+                    } label: {
+                        Label("Mover a proyecto o carpeta", systemImage: "folder")
+                    }
+                    .disabled(chat.isTemporary)
+                    Divider()
+                    Button(role: .destructive) {
+                        confirmDelete = true
+                    } label: {
+                        Label("Eliminar chat", systemImage: "trash")
+                    }
                 }
-                .accessibilityLabel("Opciones del chat")
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Palette.ink)
+                    .frame(width: 46, height: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Opciones del chat")
+            BarDivider()
+            BarButton(icon: "square.and.pencil", label: "Nuevo chat") { store.newChat() }
         }
         .alert("Renombrar chat", isPresented: $showRename) {
             TextField("Título", text: $newTitle)
@@ -199,10 +229,13 @@ struct MessageRow: View {
     @State private var copied = false
     @State private var shared: SharedFile? = nil
     @State private var editing: EditorTarget? = nil
+    @FocusState private var editFocused: Bool
 
     var body: some View {
         Group {
-            if message.role == .user {
+            if message.role == .user && store.editingMessage == message.id {
+                editor
+            } else if message.role == .user {
                 userMessage
             } else if let kind = message.kind {
                 creationMessage(kind)
@@ -283,9 +316,11 @@ struct MessageRow: View {
             }
             Text(message.text)
                 .foregroundStyle(Palette.ink)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Palette.bubble, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 11)
+                .background(Palette.bubble, in: UnevenRoundedRectangle(topLeadingRadius: 22, bottomLeadingRadius: 22,
+                                                                     bottomTrailingRadius: 8, topTrailingRadius: 22,
+                                                                     style: .continuous))
                 .contextMenu {
                     Button {
                         copy()
@@ -305,13 +340,123 @@ struct MessageRow: View {
                     .font(.k(.caption2))
                     .foregroundStyle(Palette.ink3)
             }
+            userActions
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
-        .padding(.leading, 44)
+        .padding(.leading, 56)
+    }
+
+    /// Copy, edit, and the arrows between versions of an edited message.
+    private var userActions: some View {
+        HStack(spacing: 0) {
+            if let versions = message.versions, versions.count > 1 {
+                let index = min(message.versionIndex ?? 0, versions.count - 1)
+                Button {
+                    store.showVersion(chatID: chatID, messageID: message.id, step: -1)
+                } label: {
+                    Image(systemName: "chevron.left").frame(width: 30, height: 32).contentShape(Rectangle())
+                }
+                .disabled(index == 0)
+                .accessibilityLabel("Versión anterior")
+                Text("\(index + 1)/\(versions.count)")
+                    .font(.k(.caption).weight(.medium))
+                    .accessibilityLabel("Versión \(index + 1) de \(versions.count)")
+                Button {
+                    store.showVersion(chatID: chatID, messageID: message.id, step: 1)
+                } label: {
+                    Image(systemName: "chevron.right").frame(width: 30, height: 32).contentShape(Rectangle())
+                }
+                .disabled(index == versions.count - 1)
+                .accessibilityLabel("Versión siguiente")
+            }
+            Button {
+                copy()
+            } label: {
+                Image(systemName: "doc.on.doc").frame(width: 34, height: 32).contentShape(Rectangle())
+            }
+            .accessibilityLabel("Copiar mensaje")
+            Button {
+                store.edit(chatID: chatID, messageID: message.id)
+            } label: {
+                Image(systemName: "pencil").frame(width: 34, height: 32).contentShape(Rectangle())
+            }
+            .accessibilityLabel("Editar y volver a enviar")
+        }
+        .font(.k(.footnote))
+        .foregroundStyle(Palette.ink3)
+        .buttonStyle(.plain)
+    }
+
+    /// The message opened in place: change it and send it again as a new version.
+    private var editor: some View {
+        @Bindable var store = store
+        return VStack(alignment: .trailing, spacing: 10) {
+            TextField("Edita tu mensaje", text: $store.editText, axis: .vertical)
+                .lineLimit(1...10)
+                .focused($editFocused)
+                .foregroundStyle(Palette.ink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 8) {
+                Text(message.versions == nil ? "La respuesta anterior queda guardada." : "Se guarda como otra versión.")
+                    .font(.k(.caption))
+                    .foregroundStyle(Palette.ink3)
+                Spacer(minLength: 4)
+                Button {
+                    store.cancelEdit()
+                } label: {
+                    Text("Cancelar")
+                        .font(.k(.footnote).weight(.semibold))
+                        .foregroundStyle(Palette.ink)
+                        .padding(.horizontal, 14)
+                        .frame(height: 34)
+                        .background(Palette.sunk, in: Capsule())
+                }
+                Button {
+                    store.resendEdit(chatID: chatID, messageID: message.id)
+                } label: {
+                    Label("Enviar", systemImage: "arrow.up")
+                        .font(.k(.footnote).weight(.semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .frame(height: 34)
+                        .background(Capsule().fill(Palette.accentGradient))
+                }
+            }
+            .buttonStyle(PressScale())
+        }
+        .padding(14)
+        .background(Palette.raised, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Palette.accent.opacity(0.35), lineWidth: 2))
+        .onAppear { editFocused = true }
+    }
+
+    /// Who answered, above the answer: the mark, Lithium 1.1 and how it thought.
+    private var botHeader: some View {
+        HStack(spacing: 7) {
+            LogoMark()
+                .fill(Palette.ink)
+                .frame(width: 15, height: 15)
+            Text(Brand.modelName)
+                .font(.k(.footnote).weight(.semibold))
+                .foregroundStyle(Palette.ink)
+            Text(headerDetail)
+                .font(.k(.footnote))
+                .foregroundStyle(Palette.ink3)
+                .lineLimit(1)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var headerDetail: String {
+        var parts = [message.tier == .adv ? "Avanzado" : "Rápido"]
+        if message.mode != .general { parts.append(message.mode.name) }
+        if message.spoken == true { parts.append("en vivo") }
+        return parts.joined(separator: " · ")
     }
 
     private var botMessage: some View {
         VStack(alignment: .leading, spacing: 10) {
+            botHeader
             if showsThinking {
                 thinking
             }
@@ -565,9 +710,10 @@ struct MessageRow: View {
     }
 
     private var meta: String {
-        let base = message.tier == .adv ? "\(Brand.modelName) · Avanzado · \(message.effort.name)" : "\(Brand.modelName) · Rápido"
-        let spoken = message.spoken == true ? base + " · en vivo" : base
-        return message.edited ? spoken + " · editado" : spoken
+        var parts: [String] = []
+        if message.tier == .adv { parts.append("Esfuerzo \(message.effort.name.lowercased())") }
+        if message.edited { parts.append("editado") }
+        return parts.joined(separator: " · ")
     }
 
     private func copy() {
@@ -586,6 +732,8 @@ struct MessageRow: View {
 struct ComposerView: View {
     @Environment(AppStore.self) private var store
     var placeholder: String
+    /// At the bottom of a chat (true) or in the middle of the home screen (false).
+    var docked: Bool = true
 
     @FocusState private var focused: Bool
     @State private var showImporter = false
@@ -595,145 +743,25 @@ struct ComposerView: View {
     @State private var recorder = VoiceRecorder()
 
     var body: some View {
-        @Bindable var store = store
-        VStack(spacing: 6) {
-            VStack(alignment: .leading, spacing: 10) {
-                if !store.attachments.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(store.attachments) { attachment in
-                                FileChip(attachment: attachment, onRemove: {
-                                    store.removeAttachment(attachment.id)
-                                })
-                            }
-                        }
-                    }
-                }
-
-                if recorder.isRecording {
-                    recordingBar
-                }
-
-                TextField(store.creating?.placeholder ?? store.command?.placeholder ?? placeholder, text: $store.draft, axis: .vertical)
-                    .lineLimit(1...8)
-                    .focused($focused)
-                    .foregroundStyle(Palette.ink)
-
-                HStack(spacing: 8) {
-                    plusMenu
-
-                    Menu {
-                        Picker("Modo", selection: $store.mode) {
-                            ForEach(ChatMode.allCases) { mode in
-                                Label(mode.name, systemImage: mode.icon).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.inline)
-                        .labelsHidden()
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: store.mode.icon)
-                            Text(store.mode.name)
-                                .lineLimit(1)
-                        }
-                        .font(.k(.footnote).weight(.medium))
-                        .foregroundStyle(Palette.ink2)
-                        .padding(.horizontal, 12)
-                        .frame(height: 34)
-                        .liquidCapsule()
-                    }
-                    .accessibilityLabel("Modo: \(store.mode.name)")
-
-                    if store.searchWeb {
-                        toolChip("Búsqueda", icon: "globe") { store.searchWeb = false }
-                    }
-                    if store.research {
-                        toolChip("Investigación a fondo", icon: "books.vertical") { store.research = false }
-                    }
-                    if let creating = store.creating {
-                        toolChip(creating.name, icon: creating.icon) { store.creating = nil }
-                    }
-                    if let command = store.command {
-                        toolChip(command.title, icon: command.icon) { store.command = nil }
-                    }
-
-                    Spacer(minLength: 4)
-
-                    if store.state.prefs.tier == .adv && store.state.prefs.effort == .alto && !store.isStreaming && store.creating == nil {
-                        Text("Cuenta doble")
-                            .font(.k(.caption))
-                            .foregroundStyle(Palette.yellowText)
-                    }
-
-                    if store.isStreaming {
-                        Button {
-                            store.stop()
-                        } label: {
-                            Image(systemName: "stop.fill")
-                                .font(.k(.footnote).weight(.bold))
-                                .foregroundStyle(.white)
-                                .frame(width: 34, height: 34)
-                                .background(Palette.red, in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Detener respuesta")
-                    } else if showsVoiceButton {
-                        Button {
-                            focused = false
-                            store.startVoice()
-                        } label: {
-                            Image(systemName: "waveform")
-                                .font(.k(.body).weight(.bold))
-                                .foregroundStyle(Palette.bg)
-                                .frame(width: 34, height: 34)
-                                .background(Palette.ink, in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Conversación en vivo")
-                        .accessibilityHint("Habla con Lithium y te responde en voz alta")
-                    } else {
-                        Button {
-                            store.send()
-                        } label: {
-                            Image(systemName: "arrow.up")
-                                .font(.k(.body).weight(.bold))
-                                .foregroundStyle(Palette.bg)
-                                .frame(width: 34, height: 34)
-                                .background(canSend ? Palette.ink : Palette.ink3.opacity(0.5), in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(!canSend)
-                        .accessibilityLabel("Enviar")
-                        .keyboardShortcut(.return, modifiers: .command)
-                    }
+        card
+            .frame(maxWidth: 720)
+            .padding(.horizontal, docked ? 16 : 0)
+            .padding(.top, docked ? 6 : 0)
+            .padding(.bottom, docked ? 8 : 0)
+            .frame(maxWidth: .infinity)
+            .background(alignment: .bottom) {
+                if docked {
+                    // The conversation fades out under the glass instead of ending in a hard line.
+                    LinearGradient(stops: [
+                        Gradient.Stop(color: Palette.bg.opacity(0), location: 0),
+                        Gradient.Stop(color: Palette.bg.opacity(0.9), location: 0.45),
+                        Gradient.Stop(color: Palette.bg, location: 1)
+                    ], startPoint: .top, endPoint: .bottom)
+                    .padding(.top, -24)
+                    .ignoresSafeArea(edges: .bottom)
+                    .allowsHitTesting(false)
                 }
             }
-            .padding(12)
-            .liquidSurface(Liquid.field)
-            .overlay(alignment: .top) {
-                // Typing "/" shows the commands over the composer.
-                if let query = SlashCommand.typing(store.draft) {
-                    let found = SlashCommand.matches(query)
-                    if !found.isEmpty {
-                        SlashSuggestions(commands: found) { picked in
-                            store.use(picked)
-                            focused = true
-                        }
-                        .alignmentGuide(.top) { dimensions in dimensions.height + 8 }
-                    }
-                }
-            }
-
-            Text("Kuolki puede equivocarse. Revisa lo importante.")
-                .font(.k(.caption2))
-                .foregroundStyle(Palette.ink3)
-        }
-        .frame(maxWidth: 720)
-        .padding(.horizontal, 12)
-        .padding(.top, 6)
-        .padding(.bottom, 8)
-        .frame(maxWidth: .infinity)
-        .liquidBackdrop()
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
             switch result {
             case .success(let urls):
@@ -751,6 +779,139 @@ struct ComposerView: View {
                 store.addAttachment(FileReader.photoAttachment(image, name: "foto-\(Int(Date().timeIntervalSince1970)).jpg"))
             }
             .ignoresSafeArea()
+        }
+    }
+
+    /// The glass card: attachments, the text, and the row with +, the mode, the tools and the send button.
+    private var card: some View {
+        @Bindable var store = store
+        return VStack(alignment: .leading, spacing: 10) {
+            if !store.attachments.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(store.attachments) { attachment in
+                            FileChip(attachment: attachment, onRemove: {
+                                store.removeAttachment(attachment.id)
+                            })
+                        }
+                    }
+                }
+            }
+
+            if recorder.isRecording {
+                recordingBar
+            }
+
+            TextField(store.creating?.placeholder ?? store.command?.placeholder ?? placeholder, text: $store.draft, axis: .vertical)
+                .font(.k(.body))
+                .lineLimit(1...8)
+                .focused($focused)
+                .foregroundStyle(Palette.ink)
+                .padding(.leading, 10)
+                .padding(.trailing, 8)
+                .padding(.top, 4)
+
+            HStack(spacing: 6) {
+                plusMenu
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        Menu {
+                            Picker("Modo", selection: $store.mode) {
+                                ForEach(ChatMode.allCases) { mode in
+                                    Label(mode.name, systemImage: mode.icon).tag(mode)
+                                }
+                            }
+                            .pickerStyle(.inline)
+                            .labelsHidden()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: store.mode.icon)
+                                Text(store.mode == .general ? "Modo" : store.mode.name)
+                                    .lineLimit(1)
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 10, weight: .semibold))
+                            }
+                            .font(.k(.footnote).weight(.medium))
+                            .foregroundStyle(Palette.ink2)
+                            .padding(.horizontal, 14)
+                            .frame(height: 40)
+                            .background(Palette.sunk, in: Capsule())
+                        }
+                        .accessibilityLabel("Modo: \(store.mode.name)")
+
+                        if store.searchWeb {
+                            toolChip("Búsqueda", icon: "globe") { store.searchWeb = false }
+                        }
+                        if store.research {
+                            toolChip("Investigación", icon: "books.vertical") { store.research = false }
+                        }
+                        if let creating = store.creating {
+                            toolChip(creating.name, icon: creating.icon) { store.creating = nil }
+                        }
+                        if let command = store.command {
+                            toolChip(command.title, icon: command.icon) { store.command = nil }
+                        }
+                        if store.state.prefs.tier == .adv && store.state.prefs.effort == .alto && !store.isStreaming && store.creating == nil {
+                            Text("Cuenta doble")
+                                .font(.k(.caption))
+                                .foregroundStyle(Palette.yellowText)
+                                .padding(.horizontal, 4)
+                        }
+                    }
+                }
+
+                if store.isStreaming {
+                    Button {
+                        store.stop()
+                    } label: {
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 40, height: 40)
+                            .background(Palette.ink, in: Circle())
+                    }
+                    .buttonStyle(PressScale())
+                    .accessibilityLabel("Detener respuesta")
+                } else if showsVoiceButton {
+                    Button {
+                        focused = false
+                        store.startVoice()
+                    } label: {
+                        FlameCircle(systemImage: "waveform")
+                    }
+                    .buttonStyle(PressScale())
+                    .accessibilityLabel("Conversación en vivo")
+                    .accessibilityHint("Habla con Lithium y te responde en voz alta")
+                } else {
+                    Button {
+                        store.send()
+                    } label: {
+                        FlameCircle(systemImage: "arrow.up", enabled: canSend)
+                    }
+                    .buttonStyle(PressScale())
+                    .disabled(!canSend)
+                    .accessibilityLabel("Enviar")
+                    .keyboardShortcut(.return, modifiers: .command)
+                }
+            }
+        }
+        .padding(.top, 12)
+        .padding(.horizontal, 8)
+        .padding(.bottom, 8)
+        .liquidSurface(Liquid.field)
+        .overlay(alignment: .top) {
+            // Typing "/" shows the commands over the composer.
+            if let query = SlashCommand.typing(store.draft) {
+                let found = SlashCommand.matches(query)
+                if !found.isEmpty {
+                    SlashSuggestions(commands: found) { picked in
+                        store.use(picked)
+                        focused = true
+                    }
+                    .alignmentGuide(.top) { dimensions in dimensions.height + 8 }
+                }
+            }
         }
     }
 
@@ -824,9 +985,9 @@ struct ComposerView: View {
             }
         } label: {
             Image(systemName: "plus")
-                .font(.k(.body).weight(.semibold))
-                .foregroundStyle(Palette.ink2)
-                .frame(width: 34, height: 34)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(Palette.ink)
+                .frame(width: 40, height: 40)
                 .background(Palette.sunk, in: Circle())
         }
         .accessibilityLabel("Agregar archivos y herramientas")
@@ -845,10 +1006,10 @@ struct ComposerView: View {
             .accessibilityLabel("Quitar \(title)")
         }
         .font(.k(.footnote).weight(.medium))
-        .foregroundStyle(Palette.ink)
-        .padding(.horizontal, 11)
-        .frame(height: 34)
-        .background(Palette.sel, in: Capsule())
+        .foregroundStyle(Palette.accent)
+        .padding(.horizontal, 12)
+        .frame(height: 40)
+        .background(Palette.accent.opacity(0.12), in: Capsule())
     }
 
     private var recordingBar: some View {

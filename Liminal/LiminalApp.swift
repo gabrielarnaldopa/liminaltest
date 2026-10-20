@@ -81,45 +81,43 @@ struct RootView: View {
     }
 }
 
-/// Sidebar with chats, projects and folders, and the selected screen on the right
-/// (on iPhone, one after the other).
+/// iPhone: the screen full size with the side menu that slides over it.
+/// iPad: the sidebar with chats, projects and folders, and the selected screen on the right.
 struct MainView: View {
     @Environment(AppStore.self) private var store
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     @State private var compactColumn: NavigationSplitViewColumn = .detail
-    @State private var showSettings = false
 
     var body: some View {
-        @Bindable var store = store
+        Group {
+            if sizeClass == .regular {
+                splitView
+            } else {
+                PhoneShell()
+            }
+        }
+        .onChange(of: store.route) { store.routeChanged() }
+    }
+
+    private var splitView: some View {
         NavigationSplitView(columnVisibility: $columnVisibility, preferredCompactColumn: $compactColumn) {
-            SidebarView(compactColumn: $compactColumn, showSettings: $showSettings)
+            SideMenu(compact: false)
+                .background(Palette.side)
+                .toolbar(.hidden, for: .navigationBar)
                 .navigationSplitViewColumnWidth(min: 260, ideal: 300, max: 360)
         } detail: {
             NavigationStack {
                 DetailView()
             }
         }
-        .onChange(of: store.route) { store.routeChanged() }
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
+        // The menu button in the top bar shows or hides the sidebar.
+        .onChange(of: store.drawerOpen) { _, open in
+            guard open else { return }
+            withAnimation { columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly }
+            store.drawerOpen = false
         }
-        .fullScreenCover(isPresented: $store.showVoice) {
-            LiveVoiceView()
-        }
-        .fullScreenCover(isPresented: $store.showDev) { DevWebSheet() }
-        .sheet(item: $store.browser) { target in
-            BrowserView(start: target.url)
-        }
-        .sheet(isPresented: $store.showConnectors) {
-            NavigationStack {
-                ConnectorsSettings()
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Listo") { store.showConnectors = false }
-                        }
-                    }
-            }
-        }
+        .appSheets()
     }
 }
 

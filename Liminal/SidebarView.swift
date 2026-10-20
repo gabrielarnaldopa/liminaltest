@@ -1,12 +1,15 @@
 import SwiftUI
 
-struct SidebarView: View {
+/// The side menu: new chat, search, projects, folders and your chats, with your usage and account at the bottom.
+/// On iPhone it slides over the screen (`compact`); on iPad it is the sidebar column.
+struct SideMenu: View {
     @Environment(AppStore.self) private var store
     @Environment(AuthService.self) private var auth
-    @Binding var compactColumn: NavigationSplitViewColumn
-    @Binding var showSettings: Bool
+    let compact: Bool
 
     @State private var search = ""
+    @State private var searching = false
+    @FocusState private var searchFocused: Bool
     @State private var expandedFolders: Set<UUID> = []
     @State private var showNewProject = false
     @State private var showNewFolder = false
@@ -27,106 +30,43 @@ struct SidebarView: View {
     }
 
     var body: some View {
-        List {
-            if search.isEmpty {
-                Section {
-                    navRow("Nuevo chat", icon: "square.and.pencil", selected: store.route == .home) {
-                        store.newChat()
-                    }
-                    navRow("Kuolki Dev", icon: "chevron.left.forwardslash.chevron.right", selected: false) {
-                        store.showDev = true
-                    }
-                    if auth.session?.isAdmin == true {
-                        navRow("Administración", icon: "shield.lefthalf.filled", selected: store.route == .admin) {
-                            store.route = .admin
+        VStack(alignment: .leading, spacing: 0) {
+            header
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 1) {
+                    if searching {
+                        results
+                    } else {
+                        shortcuts
+                        projectsSection
+                        if !pinnedChats.isEmpty {
+                            SectionTitle(text: "Fijados")
+                            ForEach(pinnedChats) { chat in chatRow(chat) }
+                        }
+                        foldersSection
+                        ForEach(recentGroups, id: \.title) { group in
+                            SectionTitle(text: group.title)
+                            ForEach(group.chats) { chat in chatRow(chat) }
+                        }
+                        if store.visibleChats.isEmpty {
+                            Text("Tus chats aparecen aquí.")
+                                .font(.k(.footnote))
+                                .foregroundStyle(Palette.ink3)
+                                .padding(.horizontal, 12)
+                                .padding(.top, 14)
                         }
                     }
                 }
-
-                Section("Proyectos") {
-                    ForEach(store.state.projects) { project in
-                        projectRow(project)
-                    }
-                    Button {
-                        showNewProject = true
-                    } label: {
-                        Label("Nuevo proyecto", systemImage: "plus")
-                            .foregroundStyle(Palette.ink2)
-                    }
-                    .buttonStyle(.plain)
-                    .listRowBackground(Color.clear)
-                }
-
-                if !pinnedChats.isEmpty {
-                    Section("Fijados") {
-                        ForEach(pinnedChats) { chat in
-                            chatRow(chat)
-                        }
-                    }
-                }
-
-                Section("Carpetas") {
-                    ForEach(store.state.folders) { folder in
-                        folderRow(folder)
-                    }
-                    Button {
-                        showNewFolder = true
-                    } label: {
-                        Label("Nueva carpeta", systemImage: "folder.badge.plus")
-                            .foregroundStyle(Palette.ink2)
-                    }
-                    .buttonStyle(.plain)
-                    .listRowBackground(Color.clear)
-                }
-
-                ForEach(recentGroups, id: \.title) { group in
-                    Section(group.title) {
-                        ForEach(group.chats) { chat in
-                            chatRow(chat)
-                        }
-                    }
-                }
-            } else {
-                Section("Resultados") {
-                    if searchResults.isEmpty {
-                        Text("No hay chats que coincidan con «\(search)».")
-                            .font(.k(.subheadline))
-                            .foregroundStyle(Palette.ink3)
-                            .listRowBackground(Color.clear)
-                    }
-                    ForEach(searchResults) { chat in
-                        chatRow(chat)
-                    }
-                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 16)
             }
-        }
-        .listStyle(.sidebar)
-        .liminalList()
-        .searchable(text: $search, prompt: "Buscar chats")
-        .navigationTitle("Kuolki")
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                LogoMark()
-                    .fill(Palette.ink)
-                    .frame(width: 22, height: 22)
-                    .accessibilityHidden(true)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    store.newChat()
-                    compactColumn = .detail
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                }
-                .accessibilityLabel("Nuevo chat")
-            }
-        }
-        .safeAreaInset(edge: .bottom) {
+            .scrollDismissesKeyboard(.immediately)
+            .scrollIndicators(.hidden)
             footer
         }
         .sheet(isPresented: $showNewProject) {
-            ProjectEditor(projectID: nil) { _ in
-                compactColumn = .detail
+            ProjectEditor(projectID: nil) { id in
+                go { store.route = .project(id) }
             }
         }
         .sheet(item: $moveTarget) { target in
@@ -153,89 +93,228 @@ struct SidebarView: View {
         }
     }
 
-    // MARK: - Rows
+    // MARK: - Header and search
 
-    private func navRow(_ title: String, icon: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button {
-            action()
-            compactColumn = .detail
-        } label: {
-            Label(title, systemImage: icon)
-                .foregroundStyle(Palette.ink)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .listRowBackground(rowBackground(selected))
-        .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-
-    private func projectRow(_ project: Project) -> some View {
-        let selected = store.route == .project(project.id)
-        let count = store.visibleChats.filter { $0.projectID == project.id }.count
-        return Button {
-            store.route = .project(project.id)
-            compactColumn = .detail
-        } label: {
-            HStack(spacing: 10) {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(Color(hex: project.colorHex))
-                    .frame(width: 14, height: 14)
-                Text(project.name)
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 9) {
+                LogoMark()
+                    .fill(Palette.ink)
+                    .frame(width: 22, height: 22)
+                    .accessibilityHidden(true)
+                Text("Kuolki")
+                    .font(.k(.title3).weight(.semibold))
                     .foregroundStyle(Palette.ink)
-                    .lineLimit(1)
-                Spacer(minLength: 4)
-                Text("\(count)")
-                    .font(.k(.caption))
-                    .monospacedDigit()
-                    .foregroundStyle(Palette.ink3)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .listRowBackground(rowBackground(selected))
-        .accessibilityLabel("\(project.name), \(count) chats")
-        .accessibilityAddTraits(selected ? .isSelected : [])
-    }
-
-    private func folderRow(_ folder: Folder) -> some View {
-        let chats = store.visibleChats.filter { $0.folderID == folder.id && !$0.pinned }
-        return DisclosureGroup(isExpanded: expandedBinding(folder.id)) {
-            if chats.isEmpty {
-                Text("Vacía. Mueve un chat aquí desde su menú.")
-                    .font(.k(.footnote))
-                    .foregroundStyle(Palette.ink3)
-                    .listRowBackground(Color.clear)
-            }
-            ForEach(chats) { chat in
-                chatRow(chat)
-            }
-        } label: {
-            Label(folder.name, systemImage: "folder")
-                .foregroundStyle(Palette.ink)
-                .contextMenu {
-                    Button {
-                        startRename(.folder(folder.id), current: folder.name)
-                    } label: {
-                        Label("Renombrar", systemImage: "pencil")
+                Spacer(minLength: 8)
+                if searching {
+                    Button("Cancelar") {
+                        withAnimation(.snappy) {
+                            searching = false
+                            search = ""
+                        }
                     }
-                    Button(role: .destructive) {
-                        askDelete(.folder(folder.id))
-                    } label: {
-                        Label("Eliminar carpeta", systemImage: "trash")
+                    .font(.k(.subheadline).weight(.medium))
+                    .foregroundStyle(Palette.ink2)
+                }
+            }
+            .padding(.horizontal, 4)
+
+            if searching {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(Palette.ink3)
+                    TextField("Buscar chats", text: $search)
+                        .focused($searchFocused)
+                        .submitLabel(.search)
+                        .foregroundStyle(Palette.ink)
+                    if !search.isEmpty {
+                        Button {
+                            search = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(Palette.ink3)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Borrar la búsqueda")
                     }
                 }
+                .font(.k(.body))
+                .padding(.horizontal, 12)
+                .frame(height: 42)
+                .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
-        .listRowBackground(Color.clear)
+        .padding(.horizontal, 16)
+        .padding(.top, compact ? 10 : 16)
+        .padding(.bottom, 10)
     }
+
+    @ViewBuilder
+    private var results: some View {
+        let found = searchResults
+        if search.trimmingCharacters(in: .whitespaces).isEmpty {
+            Text("Escribe para buscar en los títulos y en los mensajes.")
+                .font(.k(.footnote))
+                .foregroundStyle(Palette.ink3)
+                .padding(.horizontal, 12)
+                .padding(.top, 6)
+        } else if found.isEmpty {
+            Text("No hay chats que coincidan con «\(search)».")
+                .font(.k(.footnote))
+                .foregroundStyle(Palette.ink3)
+                .padding(.horizontal, 12)
+                .padding(.top, 6)
+        } else {
+            SectionTitle(text: "Resultados")
+            ForEach(found) { chat in chatRow(chat) }
+        }
+    }
+
+    // MARK: - Shortcuts, projects and folders
+
+    private var shortcuts: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Button {
+                go { store.newChat() }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 16, weight: .medium))
+                    Text("Nuevo chat")
+                        .font(.k(.body).weight(.medium))
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(Palette.ink)
+                .padding(.horizontal, 14)
+                .frame(height: 46)
+                .background(Palette.raised, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .shadow(color: .black.opacity(0.05), radius: 8, y: 3)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PressScale())
+            .padding(.bottom, 6)
+
+            MenuRow(title: "Buscar chats", icon: "magnifyingglass") {
+                withAnimation(.snappy) { searching = true }
+                searchFocused = true
+            }
+            MenuRow(title: "Kuolki Dev", icon: "chevron.left.forwardslash.chevron.right") {
+                go { store.showDev = true }
+            }
+            if auth.session?.isAdmin == true {
+                MenuRow(title: "Administración", icon: "shield.lefthalf.filled", selected: store.route == .admin) {
+                    go { store.route = .admin }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var projectsSection: some View {
+        SectionTitle(text: "Proyectos", addLabel: "Nuevo proyecto") { showNewProject = true }
+        ForEach(store.state.projects) { project in
+            let selected = store.route == .project(project.id)
+            let count = store.visibleChats.filter { $0.projectID == project.id }.count
+            Button {
+                go { store.route = .project(project.id) }
+            } label: {
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(Color(hex: project.colorHex))
+                        .frame(width: 9, height: 9)
+                        .frame(width: 18)
+                    Text(project.name)
+                        .font(.k(.body))
+                        .foregroundStyle(Palette.ink)
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text("\(count)")
+                        .font(.k(.caption))
+                        .monospacedDigit()
+                        .foregroundStyle(Palette.ink3)
+                }
+                .rowShape(selected: selected)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(project.name), \(count) chats")
+            .accessibilityAddTraits(selected ? .isSelected : [])
+        }
+        if store.state.projects.isEmpty {
+            MenuRow(title: "Crea tu primer proyecto", icon: "plus", muted: true) { showNewProject = true }
+        }
+    }
+
+    @ViewBuilder
+    private var foldersSection: some View {
+        SectionTitle(text: "Carpetas", addLabel: "Nueva carpeta") { showNewFolder = true }
+        ForEach(store.state.folders) { folder in
+            let chats = store.visibleChats.filter { $0.folderID == folder.id && !$0.pinned }
+            let open = expandedFolders.contains(folder.id)
+            Button {
+                withAnimation(.snappy) {
+                    if open { expandedFolders.remove(folder.id) } else { expandedFolders.insert(folder.id) }
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: open ? "folder.fill" : "folder")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Palette.ink2)
+                        .frame(width: 18)
+                    Text(folder.name)
+                        .font(.k(.body))
+                        .foregroundStyle(Palette.ink)
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text("\(chats.count)")
+                        .font(.k(.caption))
+                        .monospacedDigit()
+                        .foregroundStyle(Palette.ink3)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Palette.ink3)
+                        .rotationEffect(.degrees(open ? 90 : 0))
+                }
+                .rowShape(selected: false)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Carpeta \(folder.name), \(chats.count) chats")
+            .accessibilityHint(open ? "Toca para cerrarla" : "Toca para abrirla")
+            .contextMenu {
+                Button {
+                    startRename(.folder(folder.id), current: folder.name)
+                } label: {
+                    Label("Renombrar", systemImage: "pencil")
+                }
+                Button(role: .destructive) {
+                    askDelete(.folder(folder.id))
+                } label: {
+                    Label("Eliminar carpeta", systemImage: "trash")
+                }
+            }
+            if open {
+                if chats.isEmpty {
+                    Text("Vacía. Mueve un chat aquí desde su menú.")
+                        .font(.k(.footnote))
+                        .foregroundStyle(Palette.ink3)
+                        .padding(.leading, 40)
+                        .padding(.vertical, 6)
+                }
+                ForEach(chats) { chat in
+                    chatRow(chat)
+                        .padding(.leading, 28)
+                }
+            }
+        }
+    }
+
+    // MARK: - A chat
 
     private func chatRow(_ chat: Chat) -> some View {
         let selected = store.route == .chat(chat.id)
         let working = chat.messages.last.map { $0.isPending || $0.isStreaming } ?? false
         return Button {
-            store.route = .chat(chat.id)
-            compactColumn = .detail
+            go { store.route = .chat(chat.id) }
         } label: {
             HStack(spacing: 8) {
                 if let projectID = chat.projectID, let project = store.project(projectID) {
@@ -244,41 +323,24 @@ struct SidebarView: View {
                         .frame(width: 7, height: 7)
                 }
                 Text(chat.title)
+                    .font(.k(.body))
                     .foregroundStyle(Palette.ink)
                     .lineLimit(1)
                 Spacer(minLength: 4)
+                if chat.pinned {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Palette.ink3)
+                }
                 if working {
                     TypingDots(size: 4.5)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
+            .rowShape(selected: selected)
         }
         .buttonStyle(.plain)
-        .listRowBackground(rowBackground(selected))
         .accessibilityAddTraits(selected ? .isSelected : [])
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button {
-                askDelete(.chat(chat.id))
-            } label: {
-                Label("Eliminar", systemImage: "trash")
-            }
-            .tint(Palette.red)
-            Button {
-                moveTarget = IDBox(id: chat.id)
-            } label: {
-                Label("Mover", systemImage: "folder")
-            }
-            .tint(Color(hex: 0x636366))
-        }
-        .swipeActions(edge: .leading) {
-            Button {
-                store.togglePin(chat.id)
-            } label: {
-                Label(chat.pinned ? "Quitar" : "Fijar", systemImage: chat.pinned ? "pin.slash" : "pin")
-            }
-            .tint(Color(hex: 0x8E8E93))
-        }
+        .accessibilityHint("Mantén presionado para fijar, renombrar, mover o eliminar")
         .contextMenu {
             Button {
                 store.togglePin(chat.id)
@@ -304,26 +366,48 @@ struct SidebarView: View {
         }
     }
 
-    private func rowBackground(_ selected: Bool) -> some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(selected ? Palette.sel : Color.clear)
-            .padding(.horizontal, 6)
-    }
-
     // MARK: - Footer: usage and account
 
     private var footer: some View {
-        let usage = store.state.usage
         let name = store.state.prefs.name.isEmpty ? (auth.session?.name ?? "Tú") : store.state.prefs.name
-        return VStack(spacing: 12) {
-            UsageMeter(title: "Avanzado, ventana de 5 h", used: usage.adv, cap: usage.advCap,
-                       detail: "Se recarga \(Fmt.relative(usage.resetAt))")
+        let percent = store.sessionPercent
+        return VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Uso · sesión actual")
+                        .font(.k(.footnote).weight(.medium))
+                        .foregroundStyle(Palette.ink2)
+                    Spacer(minLength: 8)
+                    Text(percent > 0 && percent < 1 ? "<1% usado" : "\(Int(percent))% usado")
+                        .font(.k(.footnote))
+                        .monospacedDigit()
+                        .foregroundStyle(Palette.ink3)
+                }
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Palette.sunk)
+                        Capsule()
+                            .fill(percent >= 90 ? Palette.red : percent >= 70 ? Palette.yellow : Palette.green)
+                            .frame(width: max(4, geo.size.width * percent / 100))
+                    }
+                }
+                .frame(height: 5)
+                Text("Se recarga \(Fmt.relative(store.state.usage.sessionResetAt ?? Date()))")
+                    .font(.k(.caption))
+                    .foregroundStyle(Palette.ink3)
+            }
+            .accessibilityElement(children: .combine)
+
             Button {
-                showSettings = true
+                if compact {
+                    withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) { store.openSettings() }
+                } else {
+                    store.showSettings = true
+                }
             } label: {
                 HStack(spacing: 10) {
-                    Avatar(name: name, size: 34)
-                    VStack(alignment: .leading, spacing: 2) {
+                    Avatar(name: name, size: 36)
+                    VStack(alignment: .leading, spacing: 1) {
                         HStack(spacing: 6) {
                             Text(name)
                                 .font(.k(.subheadline).weight(.semibold))
@@ -333,28 +417,37 @@ struct SidebarView: View {
                                 RoleBadge()
                             }
                         }
-                        Text("Plan \(store.state.prefs.plan.name.lowercased())")
+                        Text("Plan \(store.state.prefs.plan.name.lowercased()) · Ajustes")
                             .font(.k(.caption))
                             .foregroundStyle(Palette.ink3)
+                            .lineLimit(1)
                     }
                     Spacer(minLength: 4)
                     Image(systemName: "gearshape")
-                        .foregroundStyle(Palette.ink3)
+                        .font(.system(size: 16))
+                        .foregroundStyle(Palette.ink2)
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScale())
             .accessibilityLabel("Ajustes y cuenta de \(name)")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Palette.side)
+        .padding(.horizontal, 20)
+        .padding(.top, 14)
+        .padding(.bottom, 10)
         .overlay(alignment: .top) {
-            Rectangle().fill(Palette.line).frame(height: 0.5)
+            Rectangle().fill(Palette.line.opacity(0.7)).frame(height: 0.5).padding(.horizontal, 16)
         }
     }
 
     // MARK: - Data
+
+    /// Does what was picked, then (on iPhone) slides the menu away.
+    private func go(_ action: () -> Void) {
+        action()
+        guard compact else { return }
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) { store.closeMenu() }
+    }
 
     private var pinnedChats: [Chat] {
         store.visibleChats.filter { $0.pinned }
@@ -362,6 +455,7 @@ struct SidebarView: View {
 
     private var searchResults: [Chat] {
         let query = search.trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return [] }
         return store.visibleChats.filter { chat in
             chat.title.localizedCaseInsensitiveContains(query)
                 || chat.messages.contains { $0.text.localizedCaseInsensitiveContains(query) }
@@ -394,19 +488,6 @@ struct SidebarView: View {
             ChatGroup(title: "Últimos 7 días", chats: week),
             ChatGroup(title: "Anteriores", chats: older)
         ].filter { !$0.chats.isEmpty }
-    }
-
-    private func expandedBinding(_ id: UUID) -> Binding<Bool> {
-        Binding(
-            get: { expandedFolders.contains(id) },
-            set: { isOpen in
-                if isOpen {
-                    expandedFolders.insert(id)
-                } else {
-                    expandedFolders.remove(id)
-                }
-            }
-        )
     }
 
     // MARK: - Rename and delete
@@ -453,6 +534,80 @@ struct SidebarView: View {
         case nil: break
         }
         pendingDelete = nil
+    }
+}
+
+// MARK: - Pieces of the menu
+
+/// A small gray title over a group of rows, with an optional + on the right.
+private struct SectionTitle: View {
+    let text: String
+    var addLabel: String? = nil
+    var onAdd: (() -> Void)? = nil
+
+    var body: some View {
+        HStack {
+            Text(text)
+                .font(.k(.footnote).weight(.medium))
+                .foregroundStyle(Palette.ink3)
+            Spacer(minLength: 8)
+            if let onAdd {
+                Button(action: onAdd) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Palette.ink3)
+                        .frame(width: 30, height: 26)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(addLabel ?? "Agregar")
+            }
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 4)
+        .padding(.top, 18)
+        .padding(.bottom, 4)
+        .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// An action row with an icon (Buscar chats, Kuolki Dev, Administración).
+private struct MenuRow: View {
+    let title: String
+    let icon: String
+    var selected = false
+    var muted = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Palette.ink2)
+                    .frame(width: 18)
+                Text(title)
+                    .font(.k(.body))
+                    .foregroundStyle(muted ? Palette.ink3 : Palette.ink2)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .rowShape(selected: selected)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+private extension View {
+    /// A plain menu row: no box, just a soft highlight when it is the screen you are on.
+    func rowShape(selected: Bool) -> some View {
+        self
+            .padding(.horizontal, 12)
+            .frame(minHeight: 40)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(selected ? Palette.sel : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(Rectangle())
     }
 }
 

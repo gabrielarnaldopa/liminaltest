@@ -4,6 +4,14 @@ App de chat en SwiftUI (iOS 17 o superior): inicio de sesión de administración
 
 ## Novedades de esta versión
 
+- **iPhone rehecho como en los videos:** barra de cristal arriba (menú, «Lithium 1.1» y dos botones) que cabe en cualquier iPhone, también con Zoom de pantalla; ya no se encima nada.
+- **Menú lateral que sigue tu dedo:** desliza a la derecha en cualquier parte para abrirlo y a la izquierda (o toca afuera) para cerrarlo. Los chats van en filas simples, sin cuadros; mantén presionado un chat para fijarlo, renombrarlo, moverlo o eliminarlo.
+- **Inicio con el cuadro de texto al centro**, como en la web; en el chat queda flotando abajo, de cristal.
+- **Ajustes en una hoja** que se cierra deslizando hacia abajo, con las páginas internas que vuelven deslizando a la derecha.
+- **Diseño nuevo, igual al de la web:** fuente Bricolage Grotesque, colores de iOS 26, aura de color en el inicio, tarjetas de modos, botón de enviar con degradado y selector de modelo en cápsula de cristal.
+- **Liquid Glass:** si compilas con **Xcode 26** para iOS 26 o superior, las barras, menús y botones usan el cristal real de Apple. Con Xcode 16 o en iPhones con iOS 17 a 18 se ve un cristal esmerilado parecido.
+- **Editar lo que mandaste:** toca el lápiz debajo de tu mensaje, cambia el texto y pulsa Enviar. Kuolki responde de nuevo y guarda las versiones anteriores; las recorres con las flechas «‹ 1/2 ›».
+
 - Páginas y presentaciones en vivo, como archivos que se abren y se ven al instante.
 - Lithium puede buscar en internet y entrar a páginas (te pide permiso, o en automático).
 - Navegador integrado, comandos con «/», lista de dispositivos conectados.
@@ -17,7 +25,7 @@ App de chat en SwiftUI (iOS 17 o superior): inicio de sesión de administración
 
 ## Abrir en Xcode
 
-1. Necesitas una Mac con Xcode 16 o superior.
+1. Necesitas una Mac con Xcode 16 o superior (Xcode 26 para el Liquid Glass completo).
 2. Abre `Liminal.xcodeproj`.
 3. En **Signing & Capabilities**, elige tu equipo (tu Apple ID sirve).
 4. Elige un iPhone o el simulador y pulsa ▶︎.
@@ -26,7 +34,11 @@ App de chat en SwiftUI (iOS 17 o superior): inicio de sesión de administración
 
 El .ipa solo se puede compilar con Xcode en una Mac. Dos caminos:
 
-**Con tu Mac**
+**Con tu Mac (un comando)**
+
+Abre Terminal en esta carpeta y escribe `bash compilar-ipa.sh`. Deja `Kuolki.ipa` aquí mismo. Usa Xcode 26 si lo tienes instalado.
+
+**Con tu Mac (a mano)**
 
 1. En Xcode, elige **Any iOS Device (arm64)** y pulsa **Product › Build**.
 2. En **Product › Show Build Folder in Finder**, entra a `Products/Debug-iphoneos` y copia `Liminal.app` (el proyecto conserva su nombre interno; en el iPhone se llama Kuolki).
@@ -34,7 +46,7 @@ El .ipa solo se puede compilar con Xcode en una Mac. Dos caminos:
 
 **Sin Mac, con GitHub (gratis)**
 
-1. Sube esta carpeta a un repositorio de GitHub.
+1. Sube esta carpeta a un repositorio de GitHub. Si ya tenías una versión anterior, reemplaza **todos** los archivos (incluida la carpeta `Liminal/Fonts` y `.github`); si no, el .ipa sale con el diseño viejo.
 2. En la pestaña **Actions**, abre **Compilar IPA** y pulsa **Run workflow**.
 3. Cuando termine (unos 5 minutos), descarga **Kuolki-ipa** al final de la página.
 

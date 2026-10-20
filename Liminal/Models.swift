@@ -453,6 +453,14 @@ struct IDBox: Identifiable { let id: UUID }
 
 // MARK: - Content
 
+/// One version of a message you edited: its text and files, and the conversation that followed it.
+struct MessageVersion: Codable, Equatable {
+    var text: String
+    var files: [Attachment]
+    var command: String?
+    var after: [Message]
+}
+
 struct Message: Codable, Identifiable, Equatable {
     var id: UUID
     var role: Role
@@ -494,6 +502,9 @@ struct Message: Codable, Identifiable, Equatable {
     var ask: AskRequest? = nil
     /// For example: the answer was cut because it was too long.
     var notice: String? = nil
+    /// Earlier versions of a message you edited and sent again; versionIndex is the one on screen.
+    var versions: [MessageVersion]? = nil
+    var versionIndex: Int? = nil
 
     init(role: Role, text: String, tier: Tier = .fast, effort: Effort = .medio, engine: Engine = .deepseek,
          mode: ChatMode = .general, thinkingSeconds: Int = 0, thought: [String] = [], files: [Attachment] = []) {

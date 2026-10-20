@@ -24,10 +24,17 @@ final class AppStore {
     var showConnectors = false
     /// Shows the live conversation screen.
     var showVoice = false
+    /// The side menu on iPhone (on iPad, a request to show or hide the sidebar column).
+    var drawerOpen = false
+    /// The settings sheet.
+    var showSettings = false
     /// Short message shown at the bottom of the screen.
     var notice: String? = nil
     /// A slash command waiting in the composer: it adds its instruction to the next message.
     var command: SlashCommand? = nil
+    /// The sent message being edited in place, and its text while you edit it.
+    var editingMessage: UUID? = nil
+    var editText = ""
     /// A page open in the built-in browser.
     var browser: BrowserTarget? = nil
     /// What the connected server can do: answers in the background, search, the country.
@@ -181,6 +188,18 @@ final class AppStore {
     }
 
     // MARK: - Navigation
+
+    /// Opens the side menu, or on iPad shows or hides the sidebar.
+    func openMenu() { drawerOpen = true }
+
+    /// Closes the side menu before going somewhere else.
+    func closeMenu() { drawerOpen = false }
+
+    /// Opens settings from the side menu: the menu closes first so the sheet slides up over the chat.
+    func openSettings() {
+        drawerOpen = false
+        showSettings = true
+    }
 
     func newChat() {
         stop()
@@ -542,12 +561,77 @@ final class AppStore {
         send()
     }
 
+    /// Opens a message you sent so you can change it right there.
     func edit(chatID: UUID, messageID: UUID) {
+        guard let message = chat(chatID)?.messages.first(where: { $0.id == messageID }) else { return }
+        if isStreaming { stop() }
+        editText = message.text
+        editingMessage = messageID
+    }
+
+    func cancelEdit() {
+        editingMessage = nil
+        editText = ""
+    }
+
+    /// Sends the edited message. What followed the old one is kept as an earlier version.
+    func resendEdit(chatID: UUID, messageID: UUID) {
+        let text = editText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { show("Escribe tu mensaje antes de enviarlo."); return }
+        if isStreaming { stop() }
         guard let c = state.chats.firstIndex(where: { $0.id == chatID }),
               let m = state.chats[c].messages.firstIndex(where: { $0.id == messageID }) else { return }
-        draft = state.chats[c].messages[m].text
+        let old = state.chats[c].messages[m]
+        let after = Array(state.chats[c].messages[(m + 1)...])
+        var versions = old.versions ?? []
+        let current = MessageVersion(text: old.text, files: old.files, command: old.command, after: after)
+        if versions.isEmpty { versions = [current] } else { versions[min(old.versionIndex ?? 0, versions.count - 1)] = current }
+        let keep = (draft, attachments, searchWeb, research, creating, command)
         state.chats[c].messages.removeSubrange(m...)
-        show("Edita tu mensaje y vuelve a enviarlo")
+        editingMessage = nil
+        draft = text
+        attachments = old.files
+        searchWeb = old.prompt?.hasPrefix("Busca en internet") ?? false
+        research = false
+        creating = nil
+        command = old.command.flatMap { SlashCommand.find($0) }
+        route = .chat(chatID)
+        send()
+        if let c2 = state.chats.firstIndex(where: { $0.id == chatID }) {
+            if m < state.chats[c2].messages.count, state.chats[c2].messages[m].role == .user {
+                let sent = state.chats[c2].messages[m]
+                versions.append(MessageVersion(text: sent.text, files: sent.files, command: sent.command, after: []))
+                state.chats[c2].messages[m].versions = versions
+                state.chats[c2].messages[m].versionIndex = versions.count - 1
+            } else {
+                // It could not be sent (for example, a usage limit): put the conversation back as it was.
+                state.chats[c2].messages.append(old)
+                state.chats[c2].messages.append(contentsOf: after)
+            }
+        }
+        (draft, attachments, searchWeb, research, creating, command) = keep
+    }
+
+    /// Shows the previous or next version of an edited message, with the conversation that followed it.
+    func showVersion(chatID: UUID, messageID: UUID, step: Int) {
+        guard !isStreaming else { show("Espera a que termine la respuesta para cambiar de versión."); return }
+        guard let c = state.chats.firstIndex(where: { $0.id == chatID }),
+              let m = state.chats[c].messages.firstIndex(where: { $0.id == messageID }),
+              var versions = state.chats[c].messages[m].versions else { return }
+        let current = min(state.chats[c].messages[m].versionIndex ?? 0, versions.count - 1)
+        let next = current + step
+        guard versions.indices.contains(next) else { return }
+        let message = state.chats[c].messages[m]
+        versions[current] = MessageVersion(text: message.text, files: message.files, command: message.command,
+                                           after: Array(state.chats[c].messages[(m + 1)...]))
+        let shown = versions[next]
+        state.chats[c].messages[m].text = shown.text
+        state.chats[c].messages[m].files = shown.files
+        state.chats[c].messages[m].command = shown.command
+        state.chats[c].messages[m].versions = versions
+        state.chats[c].messages[m].versionIndex = next
+        state.chats[c].messages.removeSubrange((m + 1)...)
+        state.chats[c].messages.append(contentsOf: shown.after)
     }
 
     func setFeedback(chatID: UUID, messageID: UUID, _ value: Feedback) {

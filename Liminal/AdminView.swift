@@ -3,6 +3,7 @@ import SwiftUI
 /// Admin panel: summary, users, plans and payments. Only visible to the admin account.
 struct AdminView: View {
     @Environment(AuthService.self) private var auth
+    @Environment(AppStore.self) private var store
 
     enum Tab: String, CaseIterable, Identifiable {
         case resumen, usuarios, planes, pagos
@@ -47,7 +48,11 @@ struct AdminView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Palette.side)
         .navigationTitle("Administración")
-        .navigationBarTitleDisplayMode(.inline)
+        .topBar {
+            BarTitle(text: "Administración")
+        } trailing: {
+            BarButton(icon: "square.and.pencil", label: "Nuevo chat") { store.newChat() }
+        }
     }
 }
 

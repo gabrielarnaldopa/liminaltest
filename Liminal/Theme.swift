@@ -32,9 +32,9 @@ extension Color {
 
 enum Palette {
     // Grays
-    static let bg = Color.dynamic(light: 0xF5F5F7, dark: 0x1C1C1E)
+    static let bg = Color.dynamic(light: 0xF2F2F7, dark: 0x000000)
     static let side = Color.dynamic(light: 0xEBEBEE, dark: 0x151517)
-    static let raised = Color.dynamic(light: 0xFFFFFF, dark: 0x2C2C2E)
+    static let raised = Color.dynamic(light: 0xFFFFFF, dark: 0x1C1C1E)
     static let sunk = Color.dynamic(light: 0xEDEDF0, dark: 0x242426)
     static let sel = Color.dynamic(light: 0xE2E2E6, dark: 0x3A3A3C)
     static let ink = Color.dynamic(light: 0x1D1D1F, dark: 0xF5F5F7)
@@ -42,7 +42,13 @@ enum Palette {
     static let ink3 = Color.dynamic(light: 0x6E6E73, dark: 0x98989D)
     static let line = Color.dynamic(light: 0xD8D8DD, dark: 0x38383A)
     static let line2 = Color.dynamic(light: 0xC4C4C9, dark: 0x48484A)
-    static let bubble = Color.dynamic(light: 0xE8E8ED, dark: 0x2C2C2E)
+    static let bubble = Color.dynamic(light: 0xE9E9EE, dark: 0x2C2C2E)
+
+    // Kuolki's one accent: the lithium flame from the launch film (coral, crimson, magenta).
+    static let accent = Color(hex: 0xFF2D55)
+    static let accentGradient = LinearGradient(colors: [Color(hex: 0xFF8A5C), Color(hex: 0xFF2D55), Color(hex: 0xD9268F)],
+                                               startPoint: .topLeading, endPoint: .bottomTrailing)
+    static let aura: [Color] = [Color(hex: 0xFF2D55), Color(hex: 0xFF8A5C), Color(hex: 0x8C50FF)]
 
     // macOS traffic lights
     static let red = Color(hex: 0xFF5F57)

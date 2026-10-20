@@ -20,6 +20,9 @@ extension View {
     /// A glass capsule for chips and small buttons.
     func liquidCapsule() -> some View { modifier(LiquidCapsule()) }
 
+    /// A round glass button (the menu button in the top bar).
+    func liquidCircle() -> some View { modifier(LiquidCircle()) }
+
     /// On iOS 26 the system draws the navigation bar in glass; before, it keeps the flat app color.
     func liquidBars() -> some View { modifier(LiquidBars()) }
 
@@ -38,10 +41,11 @@ struct LiquidSurface: ViewModifier {
                                                in: .rect(cornerRadius: radius, style: .continuous)))
         }
         #endif
+        // Before iOS 26: frosted material with a light rim, so the app still reads as glass.
         return AnyView(content
-            .background(Palette.raised, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).stroke(Palette.line, lineWidth: 1))
-            .shadow(color: .black.opacity(0.06), radius: 16, y: 4))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).stroke(Color.white.opacity(0.35), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.08), radius: 18, y: 6))
     }
 }
 
@@ -52,7 +56,26 @@ struct LiquidCapsule: ViewModifier {
             return AnyView(content.glassEffect(.regular.interactive(), in: .capsule))
         }
         #endif
-        return AnyView(content.background(Palette.sunk, in: Capsule()))
+        return AnyView(content
+            .background(.ultraThinMaterial, in: Capsule())
+            .background(Palette.raised.opacity(0.55), in: Capsule())
+            .overlay(Capsule().stroke(Color.white.opacity(0.6), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.08), radius: 13, y: 6))
+    }
+}
+
+struct LiquidCircle: ViewModifier {
+    func body(content: Content) -> some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            return AnyView(content.glassEffect(.regular.interactive(), in: .circle))
+        }
+        #endif
+        return AnyView(content
+            .background(.ultraThinMaterial, in: Circle())
+            .background(Palette.raised.opacity(0.55), in: Circle())
+            .overlay(Circle().stroke(Color.white.opacity(0.6), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.08), radius: 13, y: 6))
     }
 }
 
@@ -75,6 +98,44 @@ struct LiquidBackdrop: ViewModifier {
         }
         #endif
         return AnyView(content.background(Palette.bg))
+    }
+}
+
+/// A soft glow of the flame behind the home screen.
+struct Aura: View {
+    var body: some View {
+        ZStack {
+            Circle().fill(Palette.aura[0].opacity(0.22)).frame(width: 260, height: 260).offset(x: -70, y: 10)
+            Circle().fill(Palette.aura[1].opacity(0.20)).frame(width: 230, height: 230).offset(x: 80, y: -20)
+            Circle().fill(Palette.aura[2].opacity(0.14)).frame(width: 260, height: 260).offset(x: 10, y: 90)
+        }
+        .blur(radius: 60)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Buttons that shrink a little under your finger, with a spring back.
+struct PressScale: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
+/// The round send and voice buttons, in the flame gradient.
+struct FlameCircle: View {
+    let systemImage: String
+    var enabled: Bool = true
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .font(.k(.body).weight(.bold))
+            .foregroundStyle(.white)
+            .frame(width: 40, height: 40)
+            .background(Circle().fill(Palette.accentGradient).opacity(enabled ? 1 : 0.35))
+            .shadow(color: Palette.accent.opacity(enabled ? 0.3 : 0), radius: 7, y: 4)
     }
 }
 

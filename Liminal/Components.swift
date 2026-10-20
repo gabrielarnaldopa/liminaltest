@@ -415,6 +415,44 @@ struct ModeChip: View {
     }
 }
 
+/// A mode on the home screen: an icon tile, the name and what it is for. The chosen one gets the flame ring.
+struct ModeCard: View {
+    let mode: ChatMode
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 3) {
+                Image(systemName: mode.icon)
+                    .font(.k(.body).weight(.medium))
+                    .foregroundStyle(selected ? Palette.accent : Palette.ink2)
+                    .frame(width: 36, height: 36)
+                    .background(selected ? Palette.accent.opacity(0.12) : Palette.sunk, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    .padding(.bottom, 8)
+                Text(mode.name)
+                    .font(.k(.subheadline).weight(.semibold))
+                    .foregroundStyle(Palette.ink)
+                Text(mode.summary)
+                    .font(.k(.caption))
+                    .foregroundStyle(Palette.ink3)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+            }
+            .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
+            .padding(14)
+            .liquidSurface(Liquid.card)
+            .overlay(
+                RoundedRectangle(cornerRadius: Liquid.card, style: .continuous)
+                    .stroke(selected ? Palette.accent : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(PressScale())
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityHint(mode.summary)
+    }
+}
+
 /// A white (or dark gray) rounded box with an optional title.
 struct Card<Content: View>: View {
     var title: String? = nil
@@ -513,13 +551,11 @@ struct ModelMenu: View {
                 Text("\(Brand.modelName) combina varios motores y elige el mejor para cada mensaje.")
             }
         } label: {
-            HStack(spacing: 4) {
-                Text(title)
-                    .font(.k(.headline))
-                    .foregroundStyle(Palette.ink)
-                Image(systemName: "chevron.down")
-                    .font(.k(.caption).weight(.semibold))
-                    .foregroundStyle(Palette.ink3)
+            // The widest version that fits: on small screens (or Display Zoom) the icon goes first, then the name.
+            ViewThatFits(in: .horizontal) {
+                pill(icon: true, name: true)
+                pill(icon: false, name: true)
+                pill(icon: true, name: false)
             }
         }
         .accessibilityLabel("Modelo: \(title)")
@@ -529,46 +565,34 @@ struct ModelMenu: View {
         let prefs = store.state.prefs
         return "\(Brand.modelName) \(prefs.tier.name)"
     }
-}
 
-struct LiminalToolbar: ViewModifier {
-    @Environment(AppStore.self) private var store
-    var showsTemporary = true
-
-    func body(content: Content) -> some View {
-        content
-            .navigationBarTitleDisplayMode(.inline)
-            .liquidBars()
-            .toolbar {
-                ToolbarItem(placement: .principal) {
-                    ModelMenu()
-                }
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    if showsTemporary {
-                        Button {
-                            store.toggleTemporary()
-                        } label: {
-                            Image(systemName: store.isTemporary ? "eye.slash.circle.fill" : "eye.slash")
-                                .foregroundStyle(store.isTemporary ? Palette.yellowText : Palette.ink)
-                        }
-                        .accessibilityLabel(store.isTemporary ? "Desactivar chat temporal" : "Activar chat temporal")
-                    }
-                    Button {
-                        store.newChat()
-                    } label: {
-                        Image(systemName: "square.and.pencil")
-                    }
-                    .accessibilityLabel("Nuevo chat")
-                }
+    private func pill(icon: Bool, name: Bool) -> some View {
+        HStack(spacing: 7) {
+            if icon {
+                Image(systemName: store.state.prefs.tier == .fast ? "bolt.fill" : "gauge.with.dots.needle.50percent")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Palette.accent)
             }
+            if name {
+                Text(Brand.modelName)
+                    .font(.k(.subheadline).weight(.semibold))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            Image(systemName: "chevron.down")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Palette.ink2)
+        }
+        .padding(.leading, 13)
+        .padding(.trailing, 15)
+        .frame(height: 44)
+        .liquidCapsule()
+        .fixedSize()
     }
 }
 
 extension View {
-    func liminalToolbar(showsTemporary: Bool = true) -> some View {
-        modifier(LiminalToolbar(showsTemporary: showsTemporary))
-    }
-
     /// Lists and forms on the gray background of the palette.
     func liminalList() -> some View {
         self
