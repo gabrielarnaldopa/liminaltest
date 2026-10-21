@@ -79,8 +79,8 @@ struct AdminSummary: View {
     ]
 
     var body: some View {
-        let users = store.state.users
-        let payments = store.state.payments
+        let users = store.users
+        let payments = store.payments
         let active = users.filter { $0.status != .suspendido }.count
         let expiring = users.filter { $0.status == .vence }.count
         let revenue = payments.filter { $0.status == .confirmado }.reduce(0.0) { $0 + amount($1.amount) }
@@ -99,8 +99,8 @@ struct AdminSummary: View {
                               level: pending > 0 ? .warn : .good)
                     AdminTile(title: "Pagos fallidos", value: Fmt.int(failed), detail: "revisar con el cliente",
                               level: failed > 0 ? .bad : .good)
-                    AdminTile(title: "Margen objetivo", value: "\(Int(store.state.admin.margin)) %",
-                              detail: "precio \(Fmt.money(store.state.admin.priceMonthly)) al mes")
+                    AdminTile(title: "Margen objetivo", value: "\(Int(store.admin.margin)) %",
+                              detail: "precio \(Fmt.money(store.admin.priceMonthly)) al mes")
                 }
 
                 Card(title: "Estado del servicio") {
@@ -120,7 +120,7 @@ struct AdminSummary: View {
 
                 Card(title: "Más uso avanzado esta semana") {
                     ForEach(Array(topUsers)) { user in
-                        UsageMeter(title: user.name, used: user.advThisWeek, cap: store.state.admin.weekCap)
+                        UsageMeter(title: user.name, used: user.advThisWeek, cap: store.admin.weekCap)
                     }
                 }
 
@@ -242,7 +242,7 @@ struct AdminUsers: View {
 
     private var filtered: [AdminUser] {
         let query = search.trimmingCharacters(in: .whitespaces)
-        return store.state.users.filter { user in
+        return store.users.filter { user in
             let matchesFilter: Bool
             switch filter {
             case .todos: matchesFilter = true
@@ -282,7 +282,7 @@ struct AdminUsers: View {
                 Spacer(minLength: 8)
                 StatusChip(text: user.status.label, level: user.status.level)
             }
-            UsageMeter(title: "Avanzado esta semana", used: user.advThisWeek, cap: store.state.admin.weekCap)
+            UsageMeter(title: "Avanzado esta semana", used: user.advThisWeek, cap: store.admin.weekCap)
             HStack {
                 Text("Plan \(user.plan.name.lowercased()) · \(Fmt.int(user.points)) puntos · visto \(Fmt.relative(user.lastSeen))")
                     .font(.k(.caption))
@@ -317,12 +317,12 @@ struct AdminPlans: View {
         Form {
             Section {
                 LabeledContent("Mensual (USD)") {
-                    TextField("11", value: $draft.priceMonthly, format: .number)
+                    TextField("12", value: $draft.priceMonthly, format: .number)
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                 }
                 LabeledContent("Semanal (USD)") {
-                    TextField("3", value: $draft.priceWeekly, format: .number)
+                    TextField("4", value: $draft.priceWeekly, format: .number)
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                 }
@@ -332,6 +332,8 @@ struct AdminPlans: View {
                 if !pricesValid {
                     Text("Los precios tienen que ser mayores que 0.")
                         .foregroundStyle(Palette.redText)
+                } else {
+                    Text("Con IVA incluido. El Mensual anual cuesta 10 meses. El 5× ($59, o $588 al año) y el 20× ($199, o $2.148 al año) tienen precio fijo. En la App Store el precio se pone aparte, en App Store Connect.")
                 }
             }
 
@@ -497,7 +499,7 @@ struct AdminPlans: View {
                         .font(.k(.body).weight(.semibold))
                         .frame(maxWidth: .infinity)
                 }
-                .disabled(!isValid || (draft == store.state.admin && pay == store.state.pay))
+                .disabled(!isValid || (draft == store.admin && pay == store.pay))
                 Button("Volver a los valores recomendados") {
                     let address = draft.serverURL, key = draft.serverKey
                     draft = .defaults
@@ -510,8 +512,8 @@ struct AdminPlans: View {
         .liminalList()
         .onAppear {
             if !loaded {
-                draft = store.state.admin
-                pay = store.state.pay
+                draft = store.admin
+                pay = store.pay
                 loaded = true
             }
         }
@@ -572,7 +574,7 @@ struct AdminPayments: View {
     @State private var filter: PaymentStatus? = nil
 
     var body: some View {
-        let payments = store.state.payments.sorted { $0.date > $1.date }
+        let payments = store.payments.sorted { $0.date > $1.date }
         let shown = payments.filter { filter == nil || $0.status == filter }
         List {
             Section {

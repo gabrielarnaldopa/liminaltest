@@ -23,7 +23,6 @@ struct PhoneShell: View {
                 NavigationStack {
                     DetailView()
                 }
-                .offset(x: reveal * 0.14)
                 .accessibilityHidden(store.drawerOpen)
 
                 // The dim layer: tap it to close the menu.
@@ -35,18 +34,29 @@ struct PhoneShell: View {
                     .allowsHitTesting(progress > 0.01)
                     .accessibilityHidden(true)
 
-                ZStack(alignment: .topLeading) {
-                    DrawerSurface()
-                        .shadow(color: .black.opacity(0.22 * progress), radius: 34, x: 14)
-                        .ignoresSafeArea()
-                    SideMenu(compact: true)
+                if progress > 0 || dragging {
+                    ZStack(alignment: .topLeading) {
+                        DrawerSurface()
+                            .ignoresSafeArea()
+                        SideMenu(compact: true)
+                    }
+                    .frame(width: width)
+                    // A soft edge instead of a live shadow: it costs nothing while the menu moves.
+                    .overlay(alignment: .trailing) {
+                        LinearGradient(colors: [.black.opacity(0.12), .clear], startPoint: .leading, endPoint: .trailing)
+                            .frame(width: 18)
+                            .offset(x: 18)
+                            .ignoresSafeArea()
+                            .allowsHitTesting(false)
+                    }
+                    .frame(maxHeight: .infinity)
+                    .offset(x: reveal - width)
+                    .allowsHitTesting(progress > 0.98)
+                    .accessibilityHidden(!store.drawerOpen)
+                    .accessibilityAction(.escape) { setOpen(false) }
+                    .transition(.move(edge: .leading))
+                    .transaction { if dragging { $0.animation = nil } }
                 }
-                .frame(width: width)
-                .frame(maxHeight: .infinity)
-                .offset(x: reveal - width)
-                .allowsHitTesting(progress > 0.98)
-                .accessibilityHidden(!store.drawerOpen)
-                .accessibilityAction(.escape) { setOpen(false) }
             }
             .background(
                 DrawerPan(
@@ -75,7 +85,6 @@ struct PhoneShell: View {
                 if open { Keyboard.dismiss() }
             }
         }
-        .appSheets()
     }
 
     private func revealed(width: CGFloat) -> CGFloat {
@@ -98,19 +107,9 @@ struct DrawerSurface: View {
                                bottomTrailingRadius: 34, topTrailingRadius: 34, style: .continuous)
     }
 
+    /// Solid, not glass: a blur that has to be redrawn on every frame of the swipe is what made it stutter.
     var body: some View {
-        #if compiler(>=6.2)
-        if #available(iOS 26.0, *) {
-            return AnyView(Rectangle()
-                .fill(Palette.side.opacity(0.55))
-                .clipShape(shape)
-                .glassEffect(.regular, in: shape))
-        }
-        #endif
-        return AnyView(shape
-            .fill(.regularMaterial)
-            .overlay(shape.fill(Palette.side.opacity(0.6)))
-            .overlay(shape.stroke(Color.white.opacity(0.4), lineWidth: 0.5)))
+        shape.fill(Palette.side)
     }
 }
 
@@ -361,6 +360,7 @@ struct AppSheets: ViewModifier {
         return content
             .sheet(isPresented: $store.showSettings) {
                 SettingsView()
+                    .kAppearance(store.prefs)
                     .presentationDragIndicator(.visible)
                     .presentationCornerRadius(32)
             }

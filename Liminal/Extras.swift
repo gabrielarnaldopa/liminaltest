@@ -38,8 +38,8 @@ enum UsagePrice {
     struct Rates { let hit: Double; let miss: Double; let out: Double }
     static let advanced = Rates(hit: 0.006, miss: 0.3, out: 1.2)     // USD per 1M tokens at peak hours: V4.1 Flash, thinking more
     static let fast = Rates(hit: 0.006, miss: 0.3, out: 1.2)
-    static let sessionLimit = 0.25                                     // USD of compute per 5 hours
-    static let weekLimit = 1.0                                         // USD of compute per week
+    static let sessionLimit = 0.30                                     // USD of compute per 5 hours, Semanal and Mensual
+    static let weekLimit = 1.80                                        // USD of compute per week, Semanal and Mensual
 
     static func isOffPeak(_ date: Date) -> Bool {
         var calendar = Calendar(identifier: .gregorian)
@@ -64,41 +64,47 @@ extension AppStore {
     /// Brings the token meters up to date: a new session every 5 hours, a new week every 7 days.
     func checkTokenUsage() {
         let now = Date()
-        if state.usage.sessionResetAt == nil || now > (state.usage.sessionResetAt ?? now) {
-            state.usage.sessionUSD = 0
-            state.usage.sessionResetAt = now.addingTimeInterval(5 * 3600)
+        if self.usage.sessionResetAt == nil || now > (self.usage.sessionResetAt ?? now) {
+            self.usage.sessionUSD = 0
+            self.usage.sessionResetAt = now.addingTimeInterval(5 * 3600)
         }
-        if state.usage.weekUSD == nil || now > state.usage.weekResetAt {
-            if now > state.usage.weekResetAt { state.usage.weekResetAt = now.addingTimeInterval(7 * 86400) }
-            state.usage.weekUSD = 0
-            state.usage.weekTokens = 0
+        if self.usage.weekUSD == nil || now > self.usage.weekResetAt {
+            if now > self.usage.weekResetAt { self.usage.weekResetAt = now.addingTimeInterval(7 * 86400) }
+            self.usage.weekUSD = 0
+            self.usage.weekTokens = 0
         }
     }
 
-    var sessionPercent: Double { checkTokenUsage(); return min(100, (state.usage.sessionUSD ?? 0) / UsagePrice.sessionLimit * 100) }
-    var weekPercent: Double { checkTokenUsage(); return min(100, (state.usage.weekUSD ?? 0) / UsagePrice.weekLimit * 100) }
+    /// This plan's limits: the Mensual ones times the plan's factor.
+    var sessionLimit: Double { UsagePrice.sessionLimit * self.prefs.plan.sessionFactor }
+    var weekLimit: Double { UsagePrice.weekLimit * self.prefs.plan.weekFactor }
+    var sessionPercent: Double { checkTokenUsage(); return min(100, (self.usage.sessionUSD ?? 0) / sessionLimit * 100) }
+    var weekPercent: Double { checkTokenUsage(); return min(100, (self.usage.weekUSD ?? 0) / weekLimit * 100) }
 
     /// Why a new message can't go out right now, or nil. Fast keeps working when a session runs out.
     func usageBlock(tier: Tier) -> String? {
-        if weekPercent >= 100 { return "Llegaste al límite de esta semana. Se recarga \(Fmt.relative(state.usage.weekResetAt))." }
+        if self.prefs.plan.isFree && tier == .adv {
+            return "El modo Avanzado está en los planes de pago. Sigue con el modo rápido o cambia tu plan en Ajustes › Plan y pagos."
+        }
+        if weekPercent >= 100 { return "Llegaste al límite de esta semana. Se recarga \(Fmt.relative(self.usage.weekResetAt))." }
         if tier == .adv && sessionPercent >= 100 {
-            return "Llegaste al límite de esta sesión. Se recarga \(Fmt.relative(state.usage.sessionResetAt ?? Date())); mientras tanto sigue con el modo rápido."
+            return "Llegaste al límite de esta sesión. Se recarga \(Fmt.relative(self.usage.sessionResetAt ?? Date())); mientras tanto sigue con el modo rápido."
         }
         return nil
     }
 
     func addUsage(_ usage: TokenUsage, tier: Tier) {
         checkTokenUsage()
-        if (state.usage.sessionUSD ?? 0) == 0 { state.usage.sessionResetAt = Date().addingTimeInterval(5 * 3600) }
+        if (self.usage.sessionUSD ?? 0) == 0 { self.usage.sessionResetAt = Date().addingTimeInterval(5 * 3600) }
         let cost = UsagePrice.cost(usage, tier: tier)
-        state.usage.sessionUSD = (state.usage.sessionUSD ?? 0) + cost
-        state.usage.weekUSD = (state.usage.weekUSD ?? 0) + cost
-        state.usage.weekTokens = (state.usage.weekTokens ?? 0) + usage.input + usage.output
+        self.usage.sessionUSD = (self.usage.sessionUSD ?? 0) + cost
+        self.usage.weekUSD = (self.usage.weekUSD ?? 0) + cost
+        self.usage.weekTokens = (self.usage.weekTokens ?? 0) + usage.input + usage.output
     }
 
     /// Without a server (demonstration), tokens are estimated from the text: about 4 characters per token.
     func countDemoUsage(characters: Int, tier: Tier) {
-        guard LithiumClient(admin: state.admin) == nil else { return }
+        guard LithiumClient(admin: self.admin) == nil else { return }
         addUsage(TokenUsage(input: (4000 + characters * 3) / 4, cached: 600, output: 450), tier: tier)
     }
 }
@@ -181,10 +187,10 @@ struct DevWebSheet: View {
     @State private var address = ""
 
     var target: URL? {
-        guard let base = store.state.admin.webAppURL, var parts = URLComponents(string: base), parts.scheme?.hasPrefix("http") == true else { return nil }
+        guard let base = store.admin.webAppURL, var parts = URLComponents(string: base), parts.scheme?.hasPrefix("http") == true else { return nil }
         parts.queryItems = [URLQueryItem(name: "dev", value: "1")]
-        var handoff: [String: Any] = ["email": store.accountEmail ?? "", "name": store.state.prefs.name]
-        if let url = store.state.admin.serverURL, let key = store.state.admin.serverKey { handoff["api"] = ["url": url, "key": key] }
+        var handoff: [String: Any] = ["email": store.accountEmail ?? "", "name": store.prefs.name]
+        if let url = store.admin.serverURL, let key = store.admin.serverKey { handoff["api"] = ["url": url, "key": key] }
         if let data = try? JSONSerialization.data(withJSONObject: handoff) {
             parts.fragment = "lm=" + data.base64EncodedString()
         }
@@ -209,7 +215,7 @@ struct DevWebSheet: View {
                             Button("Guardar y abrir") {
                                 let clean = address.trimmingCharacters(in: .whitespacesAndNewlines)
                                 guard clean.hasPrefix("http") else { store.show("Escribe la dirección completa, con https://"); return }
-                                store.state.admin.webAppURL = clean
+                                store.admin.webAppURL = clean
                                 store.scheduleSave()
                             }
                         } header: {
@@ -224,9 +230,9 @@ struct DevWebSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Cerrar") { dismiss() }
                 }
-                if store.state.admin.webAppURL != nil {
+                if store.admin.webAppURL != nil {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button("Cambiar dirección") { store.state.admin.webAppURL = nil }
+                        Button("Cambiar dirección") { store.admin.webAppURL = nil }
                     }
                 }
             }

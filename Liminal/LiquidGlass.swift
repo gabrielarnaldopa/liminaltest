@@ -110,6 +110,7 @@ struct Aura: View {
             Circle().fill(Palette.aura[2].opacity(0.14)).frame(width: 260, height: 260).offset(x: 10, y: 90)
         }
         .blur(radius: 60)
+        .drawingGroup()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }

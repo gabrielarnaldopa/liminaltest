@@ -77,14 +77,14 @@ enum Seed {
         ]
 
         let payments: [Payment] = [
-            Payment(date: now.addingTimeInterval(-40 * 60), email: "ana.rojas@ejemplo.com", plan: .mensual, amount: "11 USDT", method: "USDT · Tron", status: .confirmado),
+            Payment(date: now.addingTimeInterval(-40 * 60), email: "ana.rojas@ejemplo.com", plan: .mensual, amount: "12 USDT", method: "USDT · Tron", status: .confirmado),
             Payment(date: now.addingTimeInterval(-3 * hour), email: "pedro.gil@ejemplo.com", plan: .mensual, amount: "11 USDC", method: "USDC · Base", status: .confirmado),
-            Payment(date: now.addingTimeInterval(-5 * hour), email: "luis.mendez@ejemplo.com", plan: .semanal, amount: "3 USDT", method: "USDT · Tron", status: .pendiente),
+            Payment(date: now.addingTimeInterval(-5 * hour), email: "luis.mendez@ejemplo.com", plan: .semanal, amount: "4 USDT", method: "USDT · Tron", status: .pendiente),
             Payment(date: now.addingTimeInterval(-9 * hour), email: "jose.marquez@ejemplo.com", plan: .mensual, amount: "11 USDC", method: "USDC · Solana", status: .fallido),
-            Payment(date: now.addingTimeInterval(-26 * hour), email: "carla.diaz@ejemplo.com", plan: .mensual, amount: "11 USDT", method: "USDT · Tron", status: .confirmado),
+            Payment(date: now.addingTimeInterval(-26 * hour), email: "carla.diaz@ejemplo.com", plan: .mensual, amount: "12 USDT", method: "USDT · Tron", status: .confirmado),
             Payment(date: now.addingTimeInterval(-2 * day), email: "sofia.torres@ejemplo.com", plan: .mensual, amount: "11 USDC", method: "USDC · Base", status: .confirmado),
-            Payment(date: now.addingTimeInterval(-3 * day), email: "valentina.r@ejemplo.com", plan: .semanal, amount: "3 USDT", method: "USDT · Tron", status: .fallido),
-            Payment(date: now.addingTimeInterval(-30 * day), email: adminEmail, plan: .mensual, amount: "11 USDT", method: "USDT · Tron", status: .confirmado)
+            Payment(date: now.addingTimeInterval(-3 * day), email: "valentina.r@ejemplo.com", plan: .semanal, amount: "4 USDT", method: "USDT · Tron", status: .fallido),
+            Payment(date: now.addingTimeInterval(-30 * day), email: adminEmail, plan: .mensual, amount: "12 USDT", method: "USDT · Tron", status: .confirmado)
         ]
 
         var paidUntilComponents = DateComponents()
@@ -114,7 +114,7 @@ enum Seed {
             ],
             memories: [
                 Memory(text: "Está construyendo Kuolki, una IA para Latinoamérica.", category: .negocio),
-                Memory(text: "El plan cuesta $11 al mes y se paga con USDT, USDC, tarjeta o Pago Móvil.", category: .negocio),
+                Memory(text: "El plan cuesta $12 al mes y se paga con Apple, Pago Móvil, USDT, USDC o tarjeta.", category: .negocio),
                 Memory(text: "Prefiere respuestas cortas y con ejemplos.", category: .preferencias)
             ],
             projects: [tienda, enfermeria],

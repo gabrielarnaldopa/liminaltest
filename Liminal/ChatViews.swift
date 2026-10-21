@@ -10,10 +10,11 @@ struct HomeView: View {
     @Environment(AuthService.self) private var auth
 
     var body: some View {
+        GeometryReader { screen in
         ScrollView {
             VStack(spacing: 0) {
+                Spacer(minLength: 12)
                 AssemblingLogo(size: 54)
-                    .padding(.top, 34)
                 Text("\(store.greeting), \(firstName)")
                     .font(.k(.title).weight(.semibold))
                     .foregroundStyle(Palette.ink)
@@ -60,14 +61,18 @@ struct HomeView: View {
                     .font(.k(.caption2))
                     .foregroundStyle(Palette.ink3)
                     .padding(.top, 18)
+                // A little more room below than above, so the whole block sits in the middle of the screen.
+                Spacer(minLength: 20)
+                Spacer(minLength: 0)
             }
             .animation(.easeInOut(duration: 0.2), value: store.mode)
             .frame(maxWidth: 640)
             .padding(.horizontal, 16)
-            .padding(.bottom, 28)
             .frame(maxWidth: .infinity)
+            .frame(minHeight: screen.size.height)
         }
         .scrollDismissesKeyboard(.interactively)
+        }
         .background(alignment: .top) {
             ZStack(alignment: .top) {
                 Palette.bg
@@ -93,7 +98,7 @@ struct HomeView: View {
     }
 
     private var firstName: String {
-        let name = store.state.prefs.name.isEmpty ? (auth.session?.name ?? "") : store.state.prefs.name
+        let name = store.prefs.name.isEmpty ? (auth.session?.name ?? "") : store.prefs.name
         return name.split(separator: " ").first.map(String.init) ?? name
     }
 }
@@ -591,7 +596,7 @@ struct MessageRow: View {
     }
 
     private var showsThinking: Bool {
-        message.tier == .adv && !message.thought.isEmpty && store.state.prefs.showThinking && !message.isPending
+        message.tier == .adv && !message.thought.isEmpty && store.prefs.showThinking && !message.isPending
     }
 
     private var thinking: some View {
@@ -741,6 +746,8 @@ struct ComposerView: View {
     @State private var showPhotos = false
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var recorder = VoiceRecorder()
+    @State private var showAdd = false
+    @State private var pending: AddSheet.AddAction? = nil
 
     var body: some View {
         card
@@ -852,7 +859,7 @@ struct ComposerView: View {
                         if let command = store.command {
                             toolChip(command.title, icon: command.icon) { store.command = nil }
                         }
-                        if store.state.prefs.tier == .adv && store.state.prefs.effort == .alto && !store.isStreaming && store.creating == nil {
+                        if store.prefs.tier == .adv && store.prefs.effort == .alto && !store.isStreaming && store.creating == nil {
                             Text("Cuenta doble")
                                 .font(.k(.caption))
                                 .foregroundStyle(Palette.yellowText)
@@ -916,73 +923,9 @@ struct ComposerView: View {
     }
 
     private var plusMenu: some View {
-        Menu {
-            Section {
-                Button {
-                    showImporter = true
-                } label: {
-                    Label("Subir archivos", systemImage: "paperclip")
-                }
-                Button {
-                    showPhotos = true
-                } label: {
-                    Label("Fotos", systemImage: "photo.on.rectangle")
-                }
-                Button {
-                    showCamera = true
-                } label: {
-                    Label("Tomar una foto", systemImage: "camera")
-                }
-                Button {
-                    toggleRecording()
-                } label: {
-                    Label(recorder.isRecording ? "Detener la grabación" : "Grabar una nota de voz", systemImage: "mic")
-                }
-                Button {
-                    focused = false
-                    store.startVoice()
-                } label: {
-                    Label("Conversación en vivo", systemImage: "waveform")
-                }
-                .disabled(recorder.isRecording)
-                Button {
-                    store.browser = BrowserTarget(url: nil)
-                } label: {
-                    Label("Navegador", systemImage: "safari")
-                }
-                Button {
-                    store.draft = "/"
-                    focused = true
-                } label: {
-                    Label("Comandos (escribe /)", systemImage: "command")
-                }
-            }
-            Section {
-                Toggle(isOn: Binding(get: { store.searchWeb }, set: { store.searchWeb = $0 })) {
-                    Label("Buscar en internet", systemImage: "globe")
-                }
-                Toggle(isOn: Binding(get: { store.research }, set: { store.research = $0; if $0 { store.searchWeb = false } })) {
-                    Label("Investigación a fondo", systemImage: "books.vertical")
-                }
-                Button {
-                    store.creating = .image
-                } label: {
-                    Label("Crear imagen · 1 crédito", systemImage: "photo")
-                }
-                Button {
-                    store.creating = .video
-                } label: {
-                    Label("Crear video de 5 s · 5 créditos", systemImage: "video")
-                }
-            }
-            Section {
-                Button {
-                    store.showConnectors = true
-                } label: {
-                    Label("Conectores", systemImage: "puzzlepiece.extension")
-                }
-                Text("Te quedan \(store.creditsLeft) de \(store.state.usage.creditsCap) créditos este mes")
-            }
+        Button {
+            focused = false
+            showAdd = true
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: 17, weight: .medium))
@@ -990,7 +933,34 @@ struct ComposerView: View {
                 .frame(width: 40, height: 40)
                 .background(Palette.sunk, in: Circle())
         }
+        .buttonStyle(PressScale())
         .accessibilityLabel("Agregar archivos y herramientas")
+        .sheet(isPresented: $showAdd) {
+            AddSheet(photoItems: $photoItems, recording: recorder.isRecording) { action in
+                pending = action
+            }
+            .kAppearance(store.prefs)
+            .pullUpSheet()
+        }
+        .onChange(of: showAdd) { _, open in
+            guard !open, let action = pending else { return }
+            pending = nil
+            // The sheet has finished closing: now the camera or the file picker can open.
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(350))
+                switch action {
+                case .camera: showCamera = true
+                case .photos: showPhotos = true
+                case .files: showImporter = true
+                case .record: toggleRecording()
+                case .voice: store.startVoice()
+                case .browser: store.browser = BrowserTarget(url: nil)
+                case .commands:
+                    store.draft = "/"
+                    focused = true
+                }
+            }
+        }
     }
 
     private func toolChip(_ title: String, icon: String, onRemove: @escaping () -> Void) -> some View {

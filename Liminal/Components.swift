@@ -382,7 +382,7 @@ struct LimitNotice: View {
     @Environment(AppStore.self) private var store
 
     var body: some View {
-        let tier = store.state.prefs.tier
+        let tier = store.prefs.tier
         if let block = store.usageBlock(tier: tier) {
             NoticeView(level: .bad, text: block)
         } else if tier == .adv && store.sessionPercent >= 80 {
@@ -523,33 +523,11 @@ struct ToastView: View {
 /// The menu at the top: model (Rápido or Avanzado), effort and engine.
 struct ModelMenu: View {
     @Environment(AppStore.self) private var store
+    @State private var showSheet = false
 
     var body: some View {
-        @Bindable var store = store
-        Menu {
-            Section(Brand.modelName) {
-                Picker("Modelo", selection: $store.state.prefs.tier) {
-                    ForEach(Tier.allCases) { tier in
-                        Label(tier.name, systemImage: tier.icon).tag(tier)
-                    }
-                }
-                .pickerStyle(.inline)
-                .labelsHidden()
-            }
-            if store.state.prefs.tier == .adv {
-                Section("Esfuerzo") {
-                    Picker("Esfuerzo", selection: $store.state.prefs.effort) {
-                        ForEach(Effort.allCases) { effort in
-                            Text(effort == .alto ? "Alto · cuenta doble" : effort.name).tag(effort)
-                        }
-                    }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
-                }
-            }
-            Section {
-                Text("\(Brand.modelName) combina varios motores y elige el mejor para cada mensaje.")
-            }
+        Button {
+            showSheet = true
         } label: {
             // The widest version that fits: on small screens (or Display Zoom) the icon goes first, then the name.
             ViewThatFits(in: .horizontal) {
@@ -558,18 +536,24 @@ struct ModelMenu: View {
                 pill(icon: true, name: false)
             }
         }
+        .buttonStyle(PressScale())
         .accessibilityLabel("Modelo: \(title)")
+        .sheet(isPresented: $showSheet) {
+            ModelSheet()
+                .kAppearance(store.prefs)
+                .pullUpSheet()
+        }
     }
 
     private var title: String {
-        let prefs = store.state.prefs
+        let prefs = store.prefs
         return "\(Brand.modelName) \(prefs.tier.name)"
     }
 
     private func pill(icon: Bool, name: Bool) -> some View {
         HStack(spacing: 7) {
             if icon {
-                Image(systemName: store.state.prefs.tier == .fast ? "bolt.fill" : "gauge.with.dots.needle.50percent")
+                Image(systemName: store.prefs.tier == .fast ? "bolt.fill" : "gauge.with.dots.needle.50percent")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Palette.accent)
             }
@@ -597,7 +581,9 @@ extension View {
     func liminalList() -> some View {
         self
             .scrollContentBackground(.hidden)
-            .background(Palette.side)
+            .background(Palette.bg)
+            .textCase(nil)
+            .listSectionSpacing(22)
     }
 
     /// Text field box used on the sign-in screen.

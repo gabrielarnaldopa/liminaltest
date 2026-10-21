@@ -559,18 +559,18 @@ struct NavigationSettings: View {
 
     var body: some View {
         @Bindable var store = store
-        let mode = store.state.prefs.browse ?? .ask
+        let mode = store.prefs.browse ?? .ask
         Form {
             Section {
-                Picker("Antes de entrar a un sitio", selection: Binding(get: { mode }, set: { store.state.prefs.browse = $0 })) {
+                Picker("Antes de entrar a un sitio", selection: Binding(get: { mode }, set: { store.prefs.browse = $0 })) {
                     ForEach(BrowseMode.allCases) { option in
                         Text(option.name).tag(option)
                     }
                 }
                 .pickerStyle(.segmented)
                 if mode == .ask {
-                    Toggle("Buscar sin preguntar", isOn: Binding(get: { store.state.prefs.allowSearch ?? false },
-                                                                set: { store.state.prefs.allowSearch = $0 }))
+                    Toggle("Buscar sin preguntar", isOn: Binding(get: { store.prefs.allowSearch ?? false },
+                                                                set: { store.prefs.allowSearch = $0 }))
                 }
             } footer: {
                 Text(mode.detail)
@@ -585,7 +585,7 @@ struct NavigationSettings: View {
             }
 
             Section {
-                let hosts = store.state.prefs.allowedHosts ?? []
+                let hosts = store.prefs.allowedHosts ?? []
                 if hosts.isEmpty {
                     Text("Ninguno todavía. Toca «Permitir siempre» cuando Lithium pida entrar a un sitio.")
                         .foregroundStyle(Palette.ink3)
@@ -596,7 +596,7 @@ struct NavigationSettings: View {
                     .onDelete { offsets in
                         var list = hosts
                         list.remove(atOffsets: offsets)
-                        store.state.prefs.allowedHosts = list
+                        store.prefs.allowedHosts = list
                     }
                 }
             } header: {

@@ -1,0 +1,178 @@
+{
+  "identifier": "6D1C1F2E",
+  "nonRenewingSubscriptions": [],
+  "products": [],
+  "settings": {
+    "_failTransactionsEnabled": false,
+    "_locale": "es_MX",
+    "_storefront": "VEN",
+    "_storeKitErrors": []
+  },
+  "subscriptionGroups": [
+    {
+      "id": "21600001",
+      "localizations": [],
+      "name": "Kuolki",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "2148.0",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "6740000101",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Plan Mensual 20× anual de Kuolki",
+              "displayName": "Mensual 20× anual",
+              "locale": "es_MX"
+            }
+          ],
+          "productID": "kuolki.20x.anual",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Mensual 20× anual",
+          "subscriptionGroupID": "21600001",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "199.0",
+          "familyShareable": false,
+          "groupNumber": 2,
+          "internalID": "6740000102",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Plan Mensual 20× de Kuolki",
+              "displayName": "Mensual 20×",
+              "locale": "es_MX"
+            }
+          ],
+          "productID": "kuolki.20x",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Mensual 20×",
+          "subscriptionGroupID": "21600001",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "588.0",
+          "familyShareable": false,
+          "groupNumber": 3,
+          "internalID": "6740000103",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Plan Mensual 5× anual de Kuolki",
+              "displayName": "Mensual 5× anual",
+              "locale": "es_MX"
+            }
+          ],
+          "productID": "kuolki.5x.anual",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Mensual 5× anual",
+          "subscriptionGroupID": "21600001",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "59.0",
+          "familyShareable": false,
+          "groupNumber": 4,
+          "internalID": "6740000104",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Plan Mensual 5× de Kuolki",
+              "displayName": "Mensual 5×",
+              "locale": "es_MX"
+            }
+          ],
+          "productID": "kuolki.5x",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Mensual 5×",
+          "subscriptionGroupID": "21600001",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "120.0",
+          "familyShareable": false,
+          "groupNumber": 5,
+          "internalID": "6740000105",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Plan Mensual anual de Kuolki",
+              "displayName": "Mensual anual",
+              "locale": "es_MX"
+            }
+          ],
+          "productID": "kuolki.mensual.anual",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Mensual anual",
+          "subscriptionGroupID": "21600001",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "12.0",
+          "familyShareable": false,
+          "groupNumber": 6,
+          "internalID": "6740000106",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Plan Mensual de Kuolki",
+              "displayName": "Mensual",
+              "locale": "es_MX"
+            }
+          ],
+          "productID": "kuolki.mensual",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Mensual",
+          "subscriptionGroupID": "21600001",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "4.0",
+          "familyShareable": false,
+          "groupNumber": 7,
+          "internalID": "6740000107",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Plan Semanal de Kuolki",
+              "displayName": "Semanal",
+              "locale": "es_MX"
+            }
+          ],
+          "productID": "kuolki.semanal",
+          "recurringSubscriptionPeriod": "P1W",
+          "referenceName": "Semanal",
+          "subscriptionGroupID": "21600001",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 4,
+    "minor": 0
+  }
+}

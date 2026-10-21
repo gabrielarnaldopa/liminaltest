@@ -7,6 +7,14 @@ import UIKit
 /// so the text-size setting and the system's accessibility sizes keep working.
 extension Font {
     static func k(_ style: Font.TextStyle) -> Font {
+        switch KFont.family {
+        case .kuolki: return bricolage(style)
+        case .sistema: return system(style, design: .default)
+        case .clasica: return system(style, design: .serif)
+        }
+    }
+
+    private static func bricolage(_ style: Font.TextStyle) -> Font {
         switch style {
         case .largeTitle: return .custom(KFont.display, size: 34, relativeTo: style).weight(.bold)
         case .title: return .custom(KFont.display, size: 28, relativeTo: style).weight(.semibold)
@@ -22,6 +30,16 @@ extension Font {
         @unknown default: return .custom(KFont.text, size: 17, relativeTo: .body)
         }
     }
+
+    /// The iPhone's own typefaces (San Francisco, or New York with serifs), with the same weights.
+    private static func system(_ style: Font.TextStyle, design: Font.Design) -> Font {
+        let base = Font.system(style, design: design)
+        switch style {
+        case .largeTitle: return base.weight(.bold)
+        case .title, .title2, .title3, .headline: return base.weight(.semibold)
+        default: return base
+        }
+    }
 }
 
 enum KFont {
@@ -29,13 +47,43 @@ enum KFont {
     static let text = "BricolageGrotesque-Regular"
     static let display = "BricolageGrotesqueDisplay-SemiBold"
 
+    /// The typeface chosen in Ajustes › Apariencia (set before the screens redraw).
+    static var family: FontFamily = .kuolki
+
     /// Navigation bar titles in the same typeface; the bars themselves keep the system glass.
     static func applyToBars() {
-        if let f = UIFont(name: "BricolageGrotesque-SemiBold", size: 17) {
-            UINavigationBar.appearance().titleTextAttributes = [.font: f]
+        let title: UIFont?
+        let large: UIFont?
+        switch family {
+        case .kuolki:
+            title = UIFont(name: "BricolageGrotesque-SemiBold", size: 17)
+            large = UIFont(name: "BricolageGrotesqueDisplay-Bold", size: 34)
+        case .sistema:
+            title = UIFont.systemFont(ofSize: 17, weight: .semibold)
+            large = UIFont.systemFont(ofSize: 34, weight: .bold)
+        case .clasica:
+            title = UIFont.systemFont(ofSize: 17, weight: .semibold).withDesign(.serif)
+            large = UIFont.systemFont(ofSize: 34, weight: .bold).withDesign(.serif)
         }
-        if let f = UIFont(name: "BricolageGrotesqueDisplay-Bold", size: 34) {
-            UINavigationBar.appearance().largeTitleTextAttributes = [.font: f]
-        }
+        if let title { UINavigationBar.appearance().titleTextAttributes = [.font: title] }
+        if let large { UINavigationBar.appearance().largeTitleTextAttributes = [.font: large] }
+    }
+}
+
+extension UIFont {
+    /// The same font in another design of the system typeface (serif, rounded).
+    func withDesign(_ design: UIFontDescriptor.SystemDesign) -> UIFont {
+        guard let descriptor = fontDescriptor.withDesign(design) else { return self }
+        return UIFont(descriptor: descriptor, size: pointSize)
+    }
+}
+
+extension View {
+    /// The person's theme and text size. Sheets get it too, so they change at once
+    /// instead of keeping the look they opened with.
+    func kAppearance(_ prefs: Prefs) -> some View {
+        self
+            .preferredColorScheme(prefs.theme.colorScheme)
+            .dynamicTypeSize(prefs.fontScale.dynamicTypeSize)
     }
 }

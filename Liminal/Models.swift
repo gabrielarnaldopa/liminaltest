@@ -99,6 +99,10 @@ enum Effort: String, Codable, CaseIterable, Identifiable, Hashable {
 /// The one model name customers see. Change it here and it changes everywhere.
 enum Brand {
     static let modelName = "Lithium 1.1"
+    /// The web app, where plans are paid with Pago Móvil, USDT, USDC or card. Administración can change it.
+    static let webApp = "https://gabrielarnaldopa.github.io/kuolki/"
+    /// Shows «Pagar en la web» next to «Pagar con Apple». Set it to false to sell only through Apple.
+    static let webPayButton = true
 }
 
 /// Engines behind Lithium 1.1. Only the admin sees them.
@@ -153,6 +157,26 @@ enum ThemeChoice: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// The three typefaces for the whole app.
+enum FontFamily: String, Codable, CaseIterable, Identifiable {
+    case kuolki, sistema, clasica
+    var id: String { rawValue }
+    var name: String {
+        switch self {
+        case .kuolki: return "Kuolki"
+        case .sistema: return "Sistema"
+        case .clasica: return "Clásica"
+        }
+    }
+    var detail: String {
+        switch self {
+        case .kuolki: return "Bricolage Grotesque, la de la marca"
+        case .sistema: return "La letra del iPhone"
+        case .clasica: return "Con serifa, para leer largo"
+        }
+    }
+}
+
 enum FontScale: String, Codable, CaseIterable, Identifiable {
     case pequena, normal, grande
     var id: String { rawValue }
@@ -177,10 +201,92 @@ enum Network: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// The plans, in dollars with IVA included. Each one gets the Mensual limits times its factor.
 enum PlanKind: String, Codable, CaseIterable, Identifiable {
-    case mensual, semanal
+    case gratis, semanal, mensual
+    case x5 = "5x"
+    case x20 = "20x"
     var id: String { rawValue }
-    var name: String { self == .mensual ? "Mensual" : "Semanal" }
+
+    var name: String {
+        switch self {
+        case .gratis: return "Gratis"
+        case .semanal: return "Semanal"
+        case .mensual: return "Mensual"
+        case .x5: return "Mensual 5×"
+        case .x20: return "Mensual 20×"
+        }
+    }
+    var isFree: Bool { self == .gratis }
+    /// Plans that can also be paid for a whole year.
+    var hasAnnual: Bool { self == .mensual || self == .x5 || self == .x20 }
+    var unit: String { self == .semanal ? "por semana" : "al mes" }
+
+    /// Price in dollars. Mensual and Semanal follow Administración; the yearly Mensual costs ten months.
+    func price(annual: Bool, admin: AdminConfig) -> Double {
+        let yearly = annual && hasAnnual
+        switch self {
+        case .gratis: return 0
+        case .semanal: return admin.priceWeekly
+        case .mensual: return yearly ? admin.priceMonthly * 10 : admin.priceMonthly
+        case .x5: return yearly ? 588 : 59
+        case .x20: return yearly ? 2148 : 199
+        }
+    }
+
+    /// Times the Mensual limits: Gratis gets a tenth of the session and a twelfth of the week.
+    var sessionFactor: Double {
+        switch self {
+        case .gratis: return 0.1
+        case .semanal, .mensual: return 1
+        case .x5: return 5
+        case .x20: return 20
+        }
+    }
+    var weekFactor: Double { self == .gratis ? 1.0 / 12 : sessionFactor }
+
+    var research: String {
+        switch self {
+        case .gratis: return "1 investigación a fondo por semana"
+        case .semanal, .mensual: return "10 investigaciones a fondo por semana"
+        case .x5: return "50 investigaciones a fondo por semana"
+        case .x20: return "Investigaciones a fondo sin un tope aparte"
+        }
+    }
+
+    /// Days a payment adds.
+    func days(annual: Bool) -> Double { annual && hasAnnual ? 365 : self == .semanal ? 7 : 30 }
+
+    /// The App Store subscription for this plan; Gratis has none.
+    func productID(annual: Bool) -> String? {
+        let yearly = annual && hasAnnual
+        switch self {
+        case .gratis: return nil
+        case .semanal: return "kuolki.semanal"
+        case .mensual: return yearly ? "kuolki.mensual.anual" : "kuolki.mensual"
+        case .x5: return yearly ? "kuolki.5x.anual" : "kuolki.5x"
+        case .x20: return yearly ? "kuolki.20x.anual" : "kuolki.20x"
+        }
+    }
+
+    static var productIDs: [String] {
+        var ids: [String] = []
+        for plan in allCases {
+            for annual in [false, true] {
+                if let id = plan.productID(annual: annual), !ids.contains(id) { ids.append(id) }
+            }
+        }
+        return ids
+    }
+
+    static func from(productID: String) -> (plan: PlanKind, annual: Bool)? {
+        for plan in allCases {
+            for annual in [false, true] where plan.productID(annual: annual) == productID {
+                return (plan, annual && plan.hasAnnual)
+            }
+        }
+        return nil
+    }
 }
 
 enum UserStatus: String, Codable, CaseIterable, Identifiable {
@@ -646,6 +752,10 @@ struct Prefs: Codable, Equatable {
     var notify: Bool? = nil
     /// The country chosen for paying; `nil` means detected.
     var region: String? = nil
+    /// Pay the chosen plan for a year. `nil` means monthly.
+    var annual: Bool? = nil
+    /// The typeface. `nil` means Kuolki's own.
+    var fontFamily: FontFamily? = nil
 }
 
 /// How fast Lithium speaks in a live conversation.
@@ -696,7 +806,7 @@ struct AdminConfig: Codable, Equatable {
     /// The web app on GitHub Pages, where Kuolki Dev runs.
     var webAppURL: String? = nil
 
-    static let defaults = AdminConfig(priceMonthly: 11, priceWeekly: 3, advCap: 65, weekCap: 450, fastCap: 200,
+    static let defaults = AdminConfig(priceMonthly: 12, priceWeekly: 4, advCap: 65, weekCap: 450, fastCap: 200,
                                       margin: 60, enabledEngines: Set(Engine.allCases), creditsCap: 100, creditCost: 0.021)
 
     /// Dollars per million tokens for DeepSeek V4.1 Flash (October 2026),
@@ -739,6 +849,8 @@ struct Payment: Codable, Identifiable, Equatable {
     var method: String
     var status: PaymentStatus
     var reference: String = ""
+    /// Paid for a whole year.
+    var annual: Bool? = nil
 }
 
 struct AppState: Codable, Equatable {

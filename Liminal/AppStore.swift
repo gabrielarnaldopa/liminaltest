@@ -5,7 +5,49 @@ import Observation
 @MainActor
 @Observable
 final class AppStore {
-    var state: AppState
+    // The saved data, each part observed on its own: a screen redraws only when the part it shows changes
+    // (an answer being written does not redraw the settings, the plan or the top bar).
+    var version: Int
+    var prefs: Prefs
+    var usage: Usage
+    var points: Int
+    var referralCode: String
+    var pointsHistory: [PointsEntry]
+    var memories: [Memory]
+    var projects: [Project]
+    var folders: [Folder]
+    var chats: [Chat]
+    var admin: AdminConfig
+    var users: [AdminUser]
+    var payments: [Payment]
+    var paidUntil: Date
+    var connectors: Set<ConnectorKind>
+    var customConnectors: [CustomConnector]
+    var pay: PaymentSettings
+
+    /// Everything that is saved, as one value: for saving, exporting and starting over.
+    var state: AppState {
+        get { AppState(version: version, prefs: prefs, usage: usage, points: points, referralCode: referralCode, pointsHistory: pointsHistory, memories: memories, projects: projects, folders: folders, chats: chats, admin: admin, users: users, payments: payments, paidUntil: paidUntil, connectors: connectors, customConnectors: customConnectors, pay: pay) }
+        set {
+            version = newValue.version
+            prefs = newValue.prefs
+            usage = newValue.usage
+            points = newValue.points
+            referralCode = newValue.referralCode
+            pointsHistory = newValue.pointsHistory
+            memories = newValue.memories
+            projects = newValue.projects
+            folders = newValue.folders
+            chats = newValue.chats
+            admin = newValue.admin
+            users = newValue.users
+            payments = newValue.payments
+            paidUntil = newValue.paidUntil
+            connectors = newValue.connectors
+            customConnectors = newValue.customConnectors
+            pay = newValue.pay
+        }
+    }
     var route: Route? = .home
     var draft = ""
     var mode: ChatMode
@@ -68,6 +110,11 @@ final class AppStore {
             loaded = try? JSONDecoder().decode(AppState.self, from: data)
         }
         var initial = loaded ?? Seed.state(name: AuthService.adminName, adminEmail: AuthService.adminEmail)
+        // The old prices ($11 and $3) become the new ones ($12 and $4).
+        if initial.admin.priceMonthly == 11 && initial.admin.priceWeekly == 3 {
+            initial.admin.priceMonthly = 12
+            initial.admin.priceWeekly = 4
+        }
         // Finish any answer that was cut off when the app closed. Answers that run on the server
         // keep going there, so they are picked up again instead (see appBecameActive).
         var queue: [(chatID: UUID, botID: UUID, tries: Int)] = []
@@ -86,7 +133,24 @@ final class AppStore {
             }
         }
         fileURL = url
-        state = initial
+        KFont.family = initial.prefs.fontFamily ?? .kuolki
+        version = initial.version
+        prefs = initial.prefs
+        usage = initial.usage
+        points = initial.points
+        referralCode = initial.referralCode
+        pointsHistory = initial.pointsHistory
+        memories = initial.memories
+        projects = initial.projects
+        folders = initial.folders
+        chats = initial.chats
+        admin = initial.admin
+        users = initial.users
+        payments = initial.payments
+        paidUntil = initial.paidUntil
+        connectors = initial.connectors
+        customConnectors = initial.customConnectors
+        pay = initial.pay
         mode = initial.prefs.defaultMode
         isTemporary = initial.prefs.tempDefault
         checkUsage()
@@ -96,9 +160,39 @@ final class AppStore {
         BackgroundJobs.shared.onFinished = { [weak self] jobID, snapshot in
             self?.applyFinishedJob(jobID, snapshot)
         }
+        watchForChanges()
     }
 
     // MARK: - Saving
+
+    /// Saves a moment after any saved part changes. Only which part changed is noticed, nothing is compared,
+    /// so typing or an answer being written stays smooth however many chats there are.
+    private func watchForChanges() {
+        withObservationTracking {
+            _ = version
+            _ = prefs
+            _ = usage
+            _ = points
+            _ = referralCode
+            _ = pointsHistory
+            _ = memories
+            _ = projects
+            _ = folders
+            _ = chats
+            _ = admin
+            _ = users
+            _ = payments
+            _ = paidUntil
+            _ = connectors
+            _ = customConnectors
+            _ = pay
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.scheduleSave()
+                self?.watchForChanges()
+            }
+        }
+    }
 
     func scheduleSave() {
         saveTask?.cancel()
@@ -109,11 +203,18 @@ final class AppStore {
         }
     }
 
-    func saveNow() {
+    /// Writes everything to disk. The writing happens off the main thread so the screen never waits for it;
+    /// `wait` is for when the app goes to the background and must finish before it is suspended.
+    func saveNow(wait: Bool = false) {
         var copy = state
         copy.chats.removeAll { $0.isTemporary }
-        guard let data = try? JSONEncoder().encode(copy) else { return }
-        try? data.write(to: fileURL, options: .atomic)
+        let snapshot = copy
+        let url = fileURL
+        if wait {
+            StateFile.write(snapshot, to: url)
+        } else {
+            Task.detached(priority: .utility) { await StateFile.shared.queue(snapshot, to: url) }
+        }
     }
 
     func resetDemo() {
@@ -130,19 +231,19 @@ final class AppStore {
     // MARK: - Reading
 
     var visibleChats: [Chat] {
-        state.chats.filter { !$0.isTemporary }.sorted { $0.updated > $1.updated }
+        self.chats.filter { !$0.isTemporary }.sorted { $0.updated > $1.updated }
     }
 
-    func chat(_ id: UUID) -> Chat? { state.chats.first { $0.id == id } }
-    func project(_ id: UUID) -> Project? { state.projects.first { $0.id == id } }
+    func chat(_ id: UUID) -> Chat? { self.chats.first { $0.id == id } }
+    func project(_ id: UUID) -> Project? { self.projects.first { $0.id == id } }
 
     // Limits come from the token meters (see Extras.swift): one measure for the whole plan.
     var advLeft: Int { usageBlock(tier: .adv) == nil ? 99 : 0 }
     var fastLeft: Int { usageBlock(tier: .fast) == nil ? 99 : 0 }
-    var creditsLeft: Int { max(0, state.usage.creditsCap - state.usage.credits) }
+    var creditsLeft: Int { max(0, self.usage.creditsCap - self.usage.credits) }
 
     var enabledEngines: [Engine] {
-        Engine.allCases.filter { state.admin.enabledEngines.contains($0) }
+        Engine.allCases.filter { self.admin.enabledEngines.contains($0) }
     }
 
     var greeting: String {
@@ -159,22 +260,22 @@ final class AppStore {
 
     func checkUsage() {
         let now = Date()
-        if now > state.usage.resetAt {
-            state.usage.adv = 0
-            state.usage.resetAt = now.addingTimeInterval(5 * 3600)
+        if now > self.usage.resetAt {
+            self.usage.adv = 0
+            self.usage.resetAt = now.addingTimeInterval(5 * 3600)
         }
-        if now > state.usage.weekResetAt {
-            state.usage.week = 0
-            state.usage.weekResetAt = now.addingTimeInterval(7 * 86400)
+        if now > self.usage.weekResetAt {
+            self.usage.week = 0
+            self.usage.weekResetAt = now.addingTimeInterval(7 * 86400)
         }
-        if now > state.usage.creditsResetAt {
-            state.usage.credits = 0
-            state.usage.creditsResetAt = now.addingTimeInterval(30 * 86400)
+        if now > self.usage.creditsResetAt {
+            self.usage.credits = 0
+            self.usage.creditsResetAt = now.addingTimeInterval(30 * 86400)
         }
         let today = Self.dayKey(now)
-        if state.usage.fastDay != today {
-            state.usage.fast = 0
-            state.usage.fastDay = today
+        if self.usage.fastDay != today {
+            self.usage.fast = 0
+            self.usage.fastDay = today
         }
     }
 
@@ -207,8 +308,8 @@ final class AppStore {
         attachments = []
         creating = nil
         searchWeb = false
-        mode = state.prefs.defaultMode
-        isTemporary = state.prefs.tempDefault
+        mode = self.prefs.defaultMode
+        isTemporary = self.prefs.tempDefault
         route = .home
         removeTemporaryChats()
     }
@@ -235,7 +336,7 @@ final class AppStore {
     private func removeTemporaryChats() {
         var keep: UUID?
         if case .chat(let id)? = route { keep = id }
-        state.chats.removeAll { $0.isTemporary && $0.id != keep }
+        self.chats.removeAll { $0.isTemporary && $0.id != keep }
     }
 
     func pick(mode newMode: ChatMode) {
@@ -270,7 +371,7 @@ final class AppStore {
             create(creating, from: text)
             return
         }
-        let prefs = state.prefs
+        let prefs = self.prefs
         let cost = prefs.tier == .adv ? prefs.effort.cost : 0
 
         if prefs.tier == .adv && advLeft < cost {
@@ -293,18 +394,18 @@ final class AppStore {
             let titleSource = text.isEmpty ? (attachments.first?.name ?? "Archivo adjunto") : text
             let newChat = Chat(title: Replies.title(from: titleSource), mode: mode, projectID: projectID,
                                isTemporary: isTemporary || !prefs.saveHistory)
-            state.chats.insert(newChat, at: 0)
+            self.chats.insert(newChat, at: 0)
             chatID = newChat.id
         }
-        guard let index = state.chats.firstIndex(where: { $0.id == chatID }) else { return }
+        guard let index = self.chats.firstIndex(where: { $0.id == chatID }) else { return }
 
-        let project = state.chats[index].projectID.flatMap { id in state.projects.first { $0.id == id } }
+        let project = self.chats[index].projectID.flatMap { id in self.projects.first { $0.id == id } }
         let userText = text.isEmpty ? "Revisa el archivo adjunto." : text
         let files = attachments
         let photos = files.filter { $0.kind == .image }.compactMap { file in VisionCache.get(file.id).map { LithiumClient.Request.Image(name: file.name, data: $0) } }
         let wantsResearch = research
         research = false
-        let isTemporaryChat = state.chats[index].isTemporary
+        let isTemporaryChat = self.chats[index].isTemporary
         var userMessage = Message(role: .user, text: userText, files: files)
         let usedCommand = command
         if let usedCommand, let prefix = usedCommand.prefix, !text.isEmpty {
@@ -315,7 +416,7 @@ final class AppStore {
         }
         let wantsWeb = searchWeb || (usedCommand?.searchesWeb ?? false)
         let modelText = userMessage.prompt ?? userText
-        state.chats[index].messages.append(userMessage)
+        self.chats[index].messages.append(userMessage)
         command = nil
 
         var bot = Message(role: .bot, text: "", tier: prefs.tier, effort: prefs.effort, engine: prefs.engine, mode: mode)
@@ -324,7 +425,7 @@ final class AppStore {
             bot.thinkingSeconds = prefs.effort.seconds
             bot.thought = Replies.thought(for: userText, mode: mode, project: project,
                                           hasCustomInstructions: !prefs.custom.isEmpty)
-            if prefs.memory, !isTemporaryChat, let last = state.memories.last {
+            if prefs.memory, !isTemporaryChat, let last = self.memories.last {
                 bot.thought.insert("Tener en cuenta lo que recuerdo: \(last.text)", at: 1)
             }
         }
@@ -337,20 +438,20 @@ final class AppStore {
             bot.savedMemory = memory
         }
         let botID = bot.id
-        state.chats[index].messages.append(bot)
-        state.chats[index].updated = Date()
+        self.chats[index].messages.append(bot)
+        self.chats[index].updated = Date()
 
         if prefs.tier == .adv {
-            state.usage.adv += cost
-            state.usage.week += cost
+            self.usage.adv += cost
+            self.usage.week += cost
         } else {
-            state.usage.fast += 1
+            self.usage.fast += 1
         }
         countDemoUsage(characters: text.count, tier: prefs.tier)
 
         var parts: [String] = []
         if bot.searchedWeb { parts.append("Busqué en internet y esto es lo más reciente:") }
-        if state.connectors.contains(.drive), text.range(of: "drive", options: .caseInsensitive) != nil {
+        if self.connectors.contains(.drive), text.range(of: "drive", options: .caseInsensitive) != nil {
             parts.append("Busqué en tu **Google Drive** y encontré 2 documentos relacionados (demostración).")
         }
         if !files.isEmpty { parts.append(Replies.fileReply(files)) }
@@ -374,7 +475,7 @@ final class AppStore {
         }
         live.beginBackgroundWork()
 
-        if let client = LithiumClient(admin: state.admin) {
+        if let client = LithiumClient(admin: self.admin) {
             // The answer runs on the server with this id, so it keeps going if the app closes.
             let jobID = Self.newJobID()
             updateMessage(chatID: chatID, messageID: botID) { message in
@@ -397,7 +498,7 @@ final class AppStore {
             }
             files.forEach { VisionCache.set($0.id, nil) }
             saveNow()
-            if server?.background == true && state.prefs.notify != false {
+            if server?.background == true && self.prefs.notify != false {
                 Task { await Notifier.requestIfNeeded() }
             }
             streamTask = Task { [weak self] in
@@ -459,22 +560,22 @@ final class AppStore {
             var projectID: UUID?
             if case .project(let id)? = route { projectID = id }
             let newChat = Chat(title: Replies.title(from: text), mode: mode, projectID: projectID,
-                               isTemporary: isTemporary || !state.prefs.saveHistory)
-            state.chats.insert(newChat, at: 0)
+                               isTemporary: isTemporary || !self.prefs.saveHistory)
+            self.chats.insert(newChat, at: 0)
             chatID = newChat.id
         }
-        guard let index = state.chats.firstIndex(where: { $0.id == chatID }) else { return }
-        state.chats[index].messages.append(Message(role: .user, text: text))
-        var bot = Message(role: .bot, text: "", tier: state.prefs.tier, effort: state.prefs.effort,
-                          engine: state.prefs.engine, mode: mode)
+        guard let index = self.chats.firstIndex(where: { $0.id == chatID }) else { return }
+        self.chats[index].messages.append(Message(role: .user, text: text))
+        var bot = Message(role: .bot, text: "", tier: self.prefs.tier, effort: self.prefs.effort,
+                          engine: self.prefs.engine, mode: mode)
         bot.kind = kind
         bot.prompt = text
         bot.seed = Self.seed(for: text + "\(Date().timeIntervalSince1970)")
         bot.isPending = true
         let botID = bot.id
-        state.chats[index].messages.append(bot)
-        state.chats[index].updated = Date()
-        state.usage.credits += kind.credits
+        self.chats[index].messages.append(bot)
+        self.chats[index].updated = Date()
+        self.usage.credits += kind.credits
 
         draft = ""
         attachments = []
@@ -514,7 +615,7 @@ final class AppStore {
     }
 
     func stop() {
-        if let job = runningJobID, server?.background == true, let client = LithiumClient(admin: state.admin) {
+        if let job = runningJobID, server?.background == true, let client = LithiumClient(admin: self.admin) {
             Task { await client.cancel(jobId: job) }
         }
         resumeQueue.removeAll()
@@ -529,18 +630,18 @@ final class AppStore {
                               detail: kind == .answer ? "" : "No se usaron créditos.", startedAt: Date(), endsAt: nil),
                         keepFor: 0)
         }
-        for c in state.chats.indices {
-            for m in state.chats[c].messages.indices
-            where state.chats[c].messages[m].isPending || state.chats[c].messages[m].isStreaming {
-                state.chats[c].messages[m].isPending = false
-                state.chats[c].messages[m].isStreaming = false
-                state.chats[c].messages[m].stopped = true
-                if let kind = state.chats[c].messages[m].kind {
+        for c in self.chats.indices {
+            for m in self.chats[c].messages.indices
+            where self.chats[c].messages[m].isPending || self.chats[c].messages[m].isStreaming {
+                self.chats[c].messages[m].isPending = false
+                self.chats[c].messages[m].isStreaming = false
+                self.chats[c].messages[m].stopped = true
+                if let kind = self.chats[c].messages[m].kind {
                     // Nothing was created, so the credits go back.
-                    state.usage.credits = max(0, state.usage.credits - kind.credits)
-                    state.chats[c].messages[m].text = "Creación cancelada. No se usaron créditos."
-                } else if state.chats[c].messages[m].text.isEmpty {
-                    state.chats[c].messages[m].text = "Respuesta detenida antes de empezar."
+                    self.usage.credits = max(0, self.usage.credits - kind.credits)
+                    self.chats[c].messages[m].text = "Creación cancelada. No se usaron créditos."
+                } else if self.chats[c].messages[m].text.isEmpty {
+                    self.chats[c].messages[m].text = "Respuesta detenida antes de empezar."
                 }
             }
         }
@@ -548,15 +649,15 @@ final class AppStore {
     }
 
     func regenerate(chatID: UUID) {
-        guard !isStreaming, let index = state.chats.firstIndex(where: { $0.id == chatID }) else { return }
-        if let last = state.chats[index].messages.last, last.role == .bot {
+        guard !isStreaming, let index = self.chats.firstIndex(where: { $0.id == chatID }) else { return }
+        if let last = self.chats[index].messages.last, last.role == .bot {
             creating = last.kind
-            state.chats[index].messages.removeLast()
+            self.chats[index].messages.removeLast()
         }
-        guard let lastUser = state.chats[index].messages.popLast() else { return }
+        guard let lastUser = self.chats[index].messages.popLast() else { return }
         draft = lastUser.text
         attachments = lastUser.files
-        mode = state.chats[index].mode
+        mode = self.chats[index].mode
         route = .chat(chatID)
         send()
     }
@@ -579,15 +680,15 @@ final class AppStore {
         let text = editText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { show("Escribe tu mensaje antes de enviarlo."); return }
         if isStreaming { stop() }
-        guard let c = state.chats.firstIndex(where: { $0.id == chatID }),
-              let m = state.chats[c].messages.firstIndex(where: { $0.id == messageID }) else { return }
-        let old = state.chats[c].messages[m]
-        let after = Array(state.chats[c].messages[(m + 1)...])
+        guard let c = self.chats.firstIndex(where: { $0.id == chatID }),
+              let m = self.chats[c].messages.firstIndex(where: { $0.id == messageID }) else { return }
+        let old = self.chats[c].messages[m]
+        let after = Array(self.chats[c].messages[(m + 1)...])
         var versions = old.versions ?? []
         let current = MessageVersion(text: old.text, files: old.files, command: old.command, after: after)
         if versions.isEmpty { versions = [current] } else { versions[min(old.versionIndex ?? 0, versions.count - 1)] = current }
         let keep = (draft, attachments, searchWeb, research, creating, command)
-        state.chats[c].messages.removeSubrange(m...)
+        self.chats[c].messages.removeSubrange(m...)
         editingMessage = nil
         draft = text
         attachments = old.files
@@ -597,16 +698,16 @@ final class AppStore {
         command = old.command.flatMap { SlashCommand.find($0) }
         route = .chat(chatID)
         send()
-        if let c2 = state.chats.firstIndex(where: { $0.id == chatID }) {
-            if m < state.chats[c2].messages.count, state.chats[c2].messages[m].role == .user {
-                let sent = state.chats[c2].messages[m]
+        if let c2 = self.chats.firstIndex(where: { $0.id == chatID }) {
+            if m < self.chats[c2].messages.count, self.chats[c2].messages[m].role == .user {
+                let sent = self.chats[c2].messages[m]
                 versions.append(MessageVersion(text: sent.text, files: sent.files, command: sent.command, after: []))
-                state.chats[c2].messages[m].versions = versions
-                state.chats[c2].messages[m].versionIndex = versions.count - 1
+                self.chats[c2].messages[m].versions = versions
+                self.chats[c2].messages[m].versionIndex = versions.count - 1
             } else {
                 // It could not be sent (for example, a usage limit): put the conversation back as it was.
-                state.chats[c2].messages.append(old)
-                state.chats[c2].messages.append(contentsOf: after)
+                self.chats[c2].messages.append(old)
+                self.chats[c2].messages.append(contentsOf: after)
             }
         }
         (draft, attachments, searchWeb, research, creating, command) = keep
@@ -615,23 +716,23 @@ final class AppStore {
     /// Shows the previous or next version of an edited message, with the conversation that followed it.
     func showVersion(chatID: UUID, messageID: UUID, step: Int) {
         guard !isStreaming else { show("Espera a que termine la respuesta para cambiar de versión."); return }
-        guard let c = state.chats.firstIndex(where: { $0.id == chatID }),
-              let m = state.chats[c].messages.firstIndex(where: { $0.id == messageID }),
-              var versions = state.chats[c].messages[m].versions else { return }
-        let current = min(state.chats[c].messages[m].versionIndex ?? 0, versions.count - 1)
+        guard let c = self.chats.firstIndex(where: { $0.id == chatID }),
+              let m = self.chats[c].messages.firstIndex(where: { $0.id == messageID }),
+              var versions = self.chats[c].messages[m].versions else { return }
+        let current = min(self.chats[c].messages[m].versionIndex ?? 0, versions.count - 1)
         let next = current + step
         guard versions.indices.contains(next) else { return }
-        let message = state.chats[c].messages[m]
+        let message = self.chats[c].messages[m]
         versions[current] = MessageVersion(text: message.text, files: message.files, command: message.command,
-                                           after: Array(state.chats[c].messages[(m + 1)...]))
+                                           after: Array(self.chats[c].messages[(m + 1)...]))
         let shown = versions[next]
-        state.chats[c].messages[m].text = shown.text
-        state.chats[c].messages[m].files = shown.files
-        state.chats[c].messages[m].command = shown.command
-        state.chats[c].messages[m].versions = versions
-        state.chats[c].messages[m].versionIndex = next
-        state.chats[c].messages.removeSubrange((m + 1)...)
-        state.chats[c].messages.append(contentsOf: shown.after)
+        self.chats[c].messages[m].text = shown.text
+        self.chats[c].messages[m].files = shown.files
+        self.chats[c].messages[m].command = shown.command
+        self.chats[c].messages[m].versions = versions
+        self.chats[c].messages[m].versionIndex = next
+        self.chats[c].messages.removeSubrange((m + 1)...)
+        self.chats[c].messages.append(contentsOf: shown.after)
     }
 
     func setFeedback(chatID: UUID, messageID: UUID, _ value: Feedback) {
@@ -644,9 +745,9 @@ final class AppStore {
     }
 
     private func updateMessage(chatID: UUID, messageID: UUID, _ change: (inout Message) -> Void) {
-        guard let c = state.chats.firstIndex(where: { $0.id == chatID }),
-              let m = state.chats[c].messages.firstIndex(where: { $0.id == messageID }) else { return }
-        change(&state.chats[c].messages[m])
+        guard let c = self.chats.firstIndex(where: { $0.id == chatID }),
+              let m = self.chats[c].messages.firstIndex(where: { $0.id == messageID }) else { return }
+        change(&self.chats[c].messages[m])
     }
 
     /// Your chats, projects, folders, memories and settings as readable JSON.
@@ -658,8 +759,8 @@ final class AppStore {
             let chats: [Chat]
             let memories: [Memory]
         }
-        let export = Export(prefs: state.prefs, projects: state.projects, folders: state.folders,
-                            chats: state.chats.filter { !$0.isTemporary }, memories: state.memories)
+        let export = Export(prefs: self.prefs, projects: self.projects, folders: self.folders,
+                            chats: self.chats.filter { !$0.isTemporary }, memories: self.memories)
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
@@ -670,14 +771,14 @@ final class AppStore {
     // MARK: - Live conversation
 
     var voiceSpeed: VoiceSpeed {
-        get { state.prefs.voiceSpeed ?? .normal }
-        set { state.prefs.voiceSpeed = newValue }
+        get { self.prefs.voiceSpeed ?? .normal }
+        set { self.prefs.voiceSpeed = newValue }
     }
 
     var liveActivitiesOn: Bool {
-        get { state.prefs.liveActivities ?? true }
+        get { self.prefs.liveActivities ?? true }
         set {
-            state.prefs.liveActivities = newValue
+            self.prefs.liveActivities = newValue
             live.isOn = newValue
             if !newValue { live.endNow() }
         }
@@ -709,7 +810,7 @@ final class AppStore {
     /// The rate, the time, the date and memory are answered on the phone; the rest goes to the server when it is set.
     func voiceTurn(_ said: String) async -> VoiceAnswer {
         guard var turn = beginVoiceTurn(said) else { return voiceRefusal(said) }
-        if turn.answer.generic, let client = LithiumClient(admin: state.admin) {
+        if turn.answer.generic, let client = LithiumClient(admin: self.admin) {
             let request = serverRequest(chatID: turn.chatID, before: nil, voice: true)
             do {
                 let reply = try await client.complete(request)
@@ -726,7 +827,7 @@ final class AppStore {
         if said.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return VoiceAnswer(text: "No te escuché bien. ¿Me lo repites?")
         }
-        if state.prefs.tier == .adv {
+        if self.prefs.tier == .adv {
             return VoiceAnswer(text: "Llegaste al límite del modo avanzado por ahora. Cambia al modo rápido y seguimos hablando.", ends: true)
         }
         return VoiceAnswer(text: "Llegaste al uso de hoy del modo rápido. Se recarga a medianoche.", ends: true)
@@ -737,7 +838,7 @@ final class AppStore {
         let text = said.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return nil }
         checkUsage()
-        let prefs = state.prefs
+        let prefs = self.prefs
         let cost = prefs.tier == .adv ? prefs.effort.cost : 0
         if prefs.tier == .adv && advLeft < cost { return nil }
         if prefs.tier == .fast && fastLeft == 0 { return nil }
@@ -750,34 +851,34 @@ final class AppStore {
             if case .project(let id)? = route { projectID = id }
             let newChat = Chat(title: Replies.title(from: text), mode: mode, projectID: projectID,
                                isTemporary: isTemporary || !prefs.saveHistory)
-            state.chats.insert(newChat, at: 0)
+            self.chats.insert(newChat, at: 0)
             chatID = newChat.id
             voiceChatID = chatID
         }
-        guard let index = state.chats.firstIndex(where: { $0.id == chatID }) else { return nil }
+        guard let index = self.chats.firstIndex(where: { $0.id == chatID }) else { return nil }
         var userMessage = Message(role: .user, text: text, mode: mode)
         userMessage.spoken = true
-        state.chats[index].messages.append(userMessage)
-        let memory = state.chats[index].isTemporary ? nil : captureMemory(from: text)
+        self.chats[index].messages.append(userMessage)
+        let memory = self.chats[index].isTemporary ? nil : captureMemory(from: text)
         if prefs.tier == .adv {
-            state.usage.adv += cost
-            state.usage.week += cost
+            self.usage.adv += cost
+            self.usage.week += cost
         } else {
-            state.usage.fast += 1
+            self.usage.fast += 1
         }
-        let answer = Replies.spoken(for: text, mode: mode, memory: memory, pay: state.pay, name: prefs.name)
+        let answer = Replies.spoken(for: text, mode: mode, memory: memory, pay: self.pay, name: prefs.name)
         return VoiceTurn(chatID: chatID, answer: answer, memory: memory, mode: mode)
     }
 
     /// Saves Lithium's answer in the conversation's chat.
     private func finishVoiceTurn(_ turn: VoiceTurn) -> VoiceAnswer {
-        guard let index = state.chats.firstIndex(where: { $0.id == turn.chatID }) else { return turn.answer }
-        let prefs = state.prefs
+        guard let index = self.chats.firstIndex(where: { $0.id == turn.chatID }) else { return turn.answer }
+        let prefs = self.prefs
         var bot = Message(role: .bot, text: turn.answer.text, tier: prefs.tier, effort: prefs.effort, engine: prefs.engine, mode: turn.mode)
         bot.spoken = true
         bot.savedMemory = turn.memory
-        state.chats[index].messages.append(bot)
-        state.chats[index].updated = Date()
+        self.chats[index].messages.append(bot)
+        self.chats[index].updated = Date()
         scheduleSave()
         return turn.answer
     }
@@ -785,11 +886,11 @@ final class AppStore {
     // MARK: - Lithium server
 
     /// True when the admin panel has the server's address and app key: answers are real.
-    var serverReady: Bool { LithiumClient(admin: state.admin) != nil }
+    var serverReady: Bool { LithiumClient(admin: self.admin) != nil }
 
     /// The conversation as the server needs it, with Lithium's settings for this person.
     func serverRequest(chatID: UUID, before messageID: UUID?, voice: Bool) -> LithiumClient.Request {
-        let prefs = state.prefs
+        let prefs = self.prefs
         let current = chat(chatID)
         var lines: [LithiumClient.Request.Line] = []
         for message in current?.messages ?? [] {
@@ -800,13 +901,13 @@ final class AppStore {
             if content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { continue }
             lines.append(.init(role: message.role == .user ? "user" : "assistant", content: String(content.prefix(24_000))))
         }
-        let year = Calendar.current.component(.year, from: state.pay.rateDate)
+        let year = Calendar.current.component(.year, from: self.pay.rateDate)
         let usesMemory = prefs.memory && current?.isTemporary != true
         return LithiumClient.Request(
             tier: prefs.tier.rawValue, effort: prefs.effort.rawValue, mode: (current?.mode ?? mode).rawValue,
             lang: prefs.language, tone: prefs.tone.rawValue, name: prefs.name, custom: prefs.custom, voice: voice,
-            memories: usesMemory ? state.memories.suffix(30).map(\.text) : [],
-            rates: .init(eur: state.pay.rateEur, usd: state.pay.rateUsd, date: "\(Replies.dayMonth(state.pay.rateDate)) de \(year)"),
+            memories: usesMemory ? self.memories.suffix(30).map(\.text) : [],
+            rates: .init(eur: self.pay.rateEur, usd: self.pay.rateUsd, date: "\(Replies.dayMonth(self.pay.rateDate)) de \(year)"),
             messages: Array(lines.suffix(24)),
             browse: voice ? BrowseMode.off.rawValue : (prefs.browse ?? .ask).rawValue,
             allowSearch: prefs.allowSearch ?? false,
@@ -819,8 +920,8 @@ final class AppStore {
             return "Escribe la dirección completa del servidor (https://…) y la clave de la app."
         }
         let probe = LithiumClient.Request(
-            tier: "fast", effort: "medio", mode: "general", lang: state.prefs.language, tone: "directo", name: "", custom: "",
-            voice: false, memories: [], rates: .init(eur: state.pay.rateEur, usd: state.pay.rateUsd, date: ""),
+            tier: "fast", effort: "medio", mode: "general", lang: self.prefs.language, tone: "directo", name: "", custom: "",
+            voice: false, memories: [], rates: .init(eur: self.pay.rateEur, usd: self.pay.rateUsd, date: ""),
             messages: [.init(role: "user", content: "Responde solo con la palabra: listo")])
         do {
             let reply = try await client.complete(probe)
@@ -860,7 +961,7 @@ final class AppStore {
 
     /// The job id of the answer being written right now, if it runs on the server.
     private var runningJobID: String? {
-        for chat in state.chats {
+        for chat in self.chats {
             for message in chat.messages where (message.isPending || message.isStreaming) && message.jobID != nil {
                 return message.jobID
             }
@@ -940,11 +1041,11 @@ final class AppStore {
                 if let notice = snapshot.notice { message.notice = notice }
             }
         case .vision(let texts):
-            if let ci = state.chats.firstIndex(where: { $0.id == chatID }),
-               let bi = state.chats[ci].messages.firstIndex(where: { $0.id == botID }), bi > 0 {
+            if let ci = self.chats.firstIndex(where: { $0.id == chatID }),
+               let bi = self.chats[ci].messages.firstIndex(where: { $0.id == botID }), bi > 0 {
                 var k = 0
-                for f in state.chats[ci].messages[bi - 1].files.indices where state.chats[ci].messages[bi - 1].files[f].kind == .image {
-                    if k < texts.count { state.chats[ci].messages[bi - 1].files[f].text = String(texts[k].prefix(8000)) }
+                for f in self.chats[ci].messages[bi - 1].files.indices where self.chats[ci].messages[bi - 1].files[f].kind == .image {
+                    if k < texts.count { self.chats[ci].messages[bi - 1].files[f].text = String(texts[k].prefix(8000)) }
                     k += 1
                 }
             }
@@ -1043,7 +1144,7 @@ final class AppStore {
     }
 
     private func resume(chatID: UUID, botID: UUID, tries: Int) {
-        guard let client = LithiumClient(admin: state.admin), let job = message(chatID, botID)?.jobID else {
+        guard let client = LithiumClient(admin: self.admin), let job = message(chatID, botID)?.jobID else {
             interrupt(chatID: chatID, botID: botID)
             return
         }
@@ -1100,9 +1201,9 @@ final class AppStore {
     /// The app leaves the screen: while it is closed, a background download waits for running answers.
     func appWentToBackground() {
         isActive = false
-        saveNow()
-        guard server?.background == true, let client = LithiumClient(admin: state.admin) else { return }
-        for chat in state.chats {
+        saveNow(wait: true)
+        guard server?.background == true, let client = LithiumClient(admin: self.admin) else { return }
+        for chat in self.chats {
             for message in chat.messages where message.isPending || message.isStreaming {
                 if let job = message.jobID {
                     BackgroundJobs.shared.watch(client.jobResultRequest(job), jobID: job)
@@ -1112,7 +1213,7 @@ final class AppStore {
     }
 
     func refreshServer() async {
-        guard let client = LithiumClient(admin: state.admin) else {
+        guard let client = LithiumClient(admin: self.admin) else {
             server = nil
             return
         }
@@ -1138,11 +1239,11 @@ final class AppStore {
     /// An answer finished on the server while the app was closed (from the background download).
     func applyFinishedJob(_ jobID: String, _ snapshot: JobSnapshot) {
         guard !snapshot.isRunning,
-              let c = state.chats.firstIndex(where: { $0.messages.contains { $0.jobID == jobID } }),
-              let m = state.chats[c].messages.firstIndex(where: { $0.jobID == jobID }) else { return }
-        let current = state.chats[c].messages[m]
+              let c = self.chats.firstIndex(where: { $0.messages.contains { $0.jobID == jobID } }),
+              let m = self.chats[c].messages.firstIndex(where: { $0.jobID == jobID }) else { return }
+        let current = self.chats[c].messages[m]
         guard current.isPending || current.isStreaming else { return }
-        let chatID = state.chats[c].id
+        let chatID = self.chats[c].id
         let botID = current.id
         // When the app is on screen, the live stream takes care of it.
         if isActive && streamingChatID == chatID && streamTask != nil { return }
@@ -1173,7 +1274,7 @@ final class AppStore {
     }
 
     private func notifyIfAway(chatID: UUID, botID: UUID) {
-        guard !isActive, state.prefs.notify != false, let message = message(chatID, botID) else { return }
+        guard !isActive, self.prefs.notify != false, let message = message(chatID, botID) else { return }
         let title = message.ask != nil ? "\(Brand.modelName) necesita tu permiso" : "\(Brand.modelName) terminó tu respuesta"
         let body = message.ask?.summary ?? Replies.preview(of: message.text)
         let id = message.jobID ?? botID.uuidString
@@ -1189,12 +1290,12 @@ final class AppStore {
             return
         }
         guard let current = message(chatID, messageID), let ask = current.ask,
-              let client = LithiumClient(admin: state.admin) else { return }
+              let client = LithiumClient(admin: self.admin) else { return }
         if approved && always {
-            var hosts = state.prefs.allowedHosts ?? []
+            var hosts = self.prefs.allowedHosts ?? []
             for host in ask.hosts where !hosts.contains(host) { hosts.append(host) }
-            state.prefs.allowedHosts = hosts
-            if ask.wantsSearch { state.prefs.allowSearch = true }
+            self.prefs.allowedHosts = hosts
+            if ask.wantsSearch { self.prefs.allowSearch = true }
             show(ask.hosts.isEmpty ? "Listo: Lithium buscará sin preguntarte." : "Listo: Lithium entrará a ese sitio sin preguntarte.")
         }
         let jobID = Self.newJobID()
@@ -1223,7 +1324,7 @@ final class AppStore {
 
     /// «Navegar siempre sin preguntar».
     func browseWithoutAsking(chatID: UUID, messageID: UUID) {
-        state.prefs.browse = .auto
+        self.prefs.browse = .auto
         show("Lithium navegará sin preguntarte. Puedes cambiarlo en Ajustes › Navegación.")
         answerAsk(chatID: chatID, messageID: messageID, approved: true, always: false)
     }
@@ -1248,10 +1349,10 @@ final class AppStore {
             case .voice: startVoice()
             case .browser: browser = BrowserTarget(url: nil)
             case .fast:
-                state.prefs.tier = .fast
+                self.prefs.tier = .fast
                 show("Modo rápido")
             case .advanced:
-                state.prefs.tier = .adv
+                self.prefs.tier = .adv
                 show("Modo avanzado")
             case .temporary: toggleTemporary()
             case .research:
@@ -1268,13 +1369,13 @@ final class AppStore {
 
     /// The country used to show payment methods.
     var paymentRegion: String {
-        state.prefs.region ?? Region.detect(timeZone: TimeZone.current.identifier, serverCountry: server?.country,
+        self.prefs.region ?? Region.detect(timeZone: TimeZone.current.identifier, serverCountry: server?.country,
                                             phoneRegion: Region.code(fromLocale: Locale.current.identifier))
     }
 
     /// Registers this device in the account's list, and learns if another device signed it out.
     func registerDevice() async {
-        guard let email = accountEmail, server?.background == true, let client = LithiumClient(admin: state.admin) else { return }
+        guard let email = accountEmail, server?.background == true, let client = LithiumClient(admin: self.admin) else { return }
         var record = Keychain.loadDevice()
         if record == nil || record?.email != email {
             let fresh = DeviceRecord(id: Self.newJobID(), email: email, token: nil)
@@ -1299,7 +1400,7 @@ final class AppStore {
 
     /// Signs out another device (or all the others with "others"). Returns a message when it fails.
     func revokeDevice(_ target: String) async -> String? {
-        guard let email = accountEmail, let client = LithiumClient(admin: state.admin), let record = Keychain.loadDevice() else {
+        guard let email = accountEmail, let client = LithiumClient(admin: self.admin), let record = Keychain.loadDevice() else {
             return "Conecta el servidor para ver tus dispositivos."
         }
         do {
@@ -1314,7 +1415,7 @@ final class AppStore {
     /// Signing out here also closes this device in the account's list.
     func forgetDevice() async {
         if let record = Keychain.loadDevice(), record.token != nil, let email = accountEmail,
-           let client = LithiumClient(admin: state.admin) {
+           let client = LithiumClient(admin: self.admin) {
             _ = try? await client.devices("revoke", body: ["email": email, "deviceId": record.id, "token": record.token ?? "", "target": record.id])
         }
         Keychain.deleteDevice()
@@ -1372,15 +1473,15 @@ final class AppStore {
 
     /// Saves facts like "me llamo…", "mi tienda…" or "recuerda que…".
     private func captureMemory(from text: String) -> Memory? {
-        guard state.prefs.memory, let found = Replies.memoryFact(in: text) else { return nil }
-        guard !state.memories.contains(where: { $0.text.lowercased() == found.text.lowercased() }) else { return nil }
-        state.memories.append(found)
+        guard self.prefs.memory, let found = Replies.memoryFact(in: text) else { return nil }
+        guard !self.memories.contains(where: { $0.text.lowercased() == found.text.lowercased() }) else { return nil }
+        self.memories.append(found)
         return found
     }
 
     func undoMemory(chatID: UUID, messageID: UUID) {
         guard let memory = chat(chatID)?.messages.first(where: { $0.id == messageID })?.savedMemory else { return }
-        state.memories.removeAll { $0.id == memory.id }
+        self.memories.removeAll { $0.id == memory.id }
         updateMessage(chatID: chatID, messageID: messageID) { message in message.savedMemory = nil }
         show("Lithium no recordará ese dato")
     }
@@ -1388,34 +1489,34 @@ final class AppStore {
     func addMemory(_ text: String, category: MemoryCategory) {
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else { return }
-        state.memories.append(Memory(text: clean.prefix(1).uppercased() + clean.dropFirst(), category: category))
+        self.memories.append(Memory(text: clean.prefix(1).uppercased() + clean.dropFirst(), category: category))
         show("Lithium lo recordará")
     }
 
     func updateMemory(_ id: UUID, text: String) {
         let clean = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty, let i = state.memories.firstIndex(where: { $0.id == id }) else { return }
-        state.memories[i].text = clean
+        guard !clean.isEmpty, let i = self.memories.firstIndex(where: { $0.id == id }) else { return }
+        self.memories[i].text = clean
         show("Recuerdo actualizado")
     }
 
     func deleteMemory(_ id: UUID) {
-        state.memories.removeAll { $0.id == id }
+        self.memories.removeAll { $0.id == id }
     }
 
     func forgetAll() {
-        state.memories.removeAll()
+        self.memories.removeAll()
         show("Lithium olvidó todo lo que recordaba")
     }
 
     // MARK: - Connectors
 
     func toggleConnector(_ kind: ConnectorKind) {
-        if state.connectors.contains(kind) {
-            state.connectors.remove(kind)
+        if self.connectors.contains(kind) {
+            self.connectors.remove(kind)
             show("Desconectaste \(kind.name)")
         } else {
-            state.connectors.insert(kind)
+            self.connectors.insert(kind)
             show("Demostración: con el servidor, aquí autorizarías \(kind.name)")
         }
     }
@@ -1428,13 +1529,13 @@ final class AppStore {
         guard cleanURL.hasPrefix("https://"), URL(string: cleanURL)?.host?.contains(".") == true else {
             return "La dirección tiene que empezar por https://"
         }
-        state.customConnectors.append(CustomConnector(name: cleanName, url: cleanURL))
+        self.customConnectors.append(CustomConnector(name: cleanName, url: cleanURL))
         show("Agregaste \(cleanName)")
         return nil
     }
 
     func removeCustomConnector(_ id: UUID) {
-        state.customConnectors.removeAll { $0.id == id }
+        self.customConnectors.removeAll { $0.id == id }
     }
 
     // MARK: - Export and editor
@@ -1472,12 +1573,61 @@ final class AppStore {
 
     // MARK: - Payments
 
-    var planPrice: Double {
-        state.prefs.plan == .mensual ? state.admin.priceMonthly : state.admin.priceWeekly
+    /// The chosen plan is paid for a year.
+    var isAnnual: Bool { (self.prefs.annual ?? false) && self.prefs.plan.hasAnnual }
+
+    var planPrice: Double { self.prefs.plan.price(annual: isAnnual, admin: self.admin) }
+
+    /// For example "Mensual 5× anual".
+    var planLabel: String { self.prefs.plan.name + (isAnnual ? " anual" : "") }
+
+    /// Show «Pagar en la web» next to paying with Apple.
+    var showsWebPay: Bool { Brand.webPayButton }
+
+    /// The web app with this account, ready to pay this plan with Pago Móvil, USDT, USDC or card.
+    func webPayURL(plan: PlanKind, annual: Bool) -> URL? {
+        let base = self.admin.webAppURL ?? Brand.webApp
+        guard var parts = URLComponents(string: base), parts.scheme?.hasPrefix("http") == true else { return nil }
+        var handoff: [String: Any] = ["email": accountEmail ?? "", "name": self.prefs.name,
+                                      "pay": ["plan": plan.rawValue, "annual": annual && plan.hasAnnual]]
+        if let url = self.admin.serverURL, let key = self.admin.serverKey { handoff["api"] = ["url": url, "key": key] }
+        guard let data = try? JSONSerialization.data(withJSONObject: handoff) else { return nil }
+        parts.fragment = "lm=" + data.base64EncodedString()
+        return parts.url
+    }
+
+    /// A fixed id for this account, sent to Apple with each purchase so the server can match the two later.
+    var appAccountToken: UUID? {
+        guard let email = accountEmail?.lowercased(), !email.isEmpty else { return nil }
+        var first: UInt64 = 0xcbf29ce484222325
+        var second: UInt64 = 0x9e3779b97f4a7c15
+        for byte in email.utf8 {
+            first = (first ^ UInt64(byte)) &* 0x100000001b3
+            second = (second ^ UInt64(byte)) &* 0xff51afd7ed558ccd
+        }
+        let hex = [first, second].map { value -> String in
+            let digits = String(value, radix: 16)
+            return String(repeating: "0", count: 16 - digits.count) + digits
+        }.joined()
+        let c = Array(hex)
+        let text = String(c[0..<8]) + "-" + String(c[8..<12]) + "-5" + String(c[13..<16]) + "-8" + String(c[17..<20]) + "-" + String(c[20..<32])
+        return UUID(uuidString: text)
+    }
+
+    /// Apple confirmed a plan: it turns on here until Apple's end date and shows once in the history.
+    func activateApplePlan(_ plan: PlanKind, annual: Bool, until: Date?, transactionID: String) {
+        self.prefs.plan = plan
+        self.prefs.annual = annual
+        self.paidUntil = max(self.paidUntil, until ?? Date().addingTimeInterval(plan.days(annual: annual) * 86400))
+        let reference = "apple-" + transactionID
+        guard !self.payments.contains(where: { $0.reference == reference }) else { return }
+        self.payments.insert(Payment(date: Date(), email: accountEmail ?? "", plan: plan,
+                                      amount: Fmt.money(plan.price(annual: annual, admin: self.admin)),
+                                      method: "Apple · App Store", status: .confirmado, reference: reference, annual: annual), at: 0)
     }
 
     var amountInBolivares: Double {
-        (planPrice * state.pay.rate * 100).rounded() / 100
+        (planPrice * self.pay.rate * 100).rounded() / 100
     }
 
     func submitPagoMovil(reference: String, bank: String) -> Bool {
@@ -1498,60 +1648,60 @@ final class AppStore {
     }
 
     private func addPayment(method: String, amount: String, reference: String) {
-        let email = state.users.first(where: { $0.isAdmin })?.email ?? ""
-        state.payments.insert(Payment(date: Date(), email: email, plan: state.prefs.plan, amount: amount,
-                                      method: method, status: .pendiente, reference: reference), at: 0)
+        let email = self.users.first(where: { $0.isAdmin })?.email ?? ""
+        self.payments.insert(Payment(date: Date(), email: email, plan: self.prefs.plan, amount: amount,
+                                      method: method, status: .pendiente, reference: reference, annual: isAnnual), at: 0)
     }
 
     func review(paymentID: UUID, approve: Bool) {
-        guard let i = state.payments.firstIndex(where: { $0.id == paymentID }) else { return }
-        state.payments[i].status = approve ? .confirmado : .fallido
-        if approve, state.users.contains(where: { $0.isAdmin && $0.email == state.payments[i].email }) {
-            let days: Double = state.payments[i].plan == .semanal ? 7 : 30
-            state.paidUntil = max(state.paidUntil, Date()).addingTimeInterval(days * 86400)
+        guard let i = self.payments.firstIndex(where: { $0.id == paymentID }) else { return }
+        self.payments[i].status = approve ? .confirmado : .fallido
+        if approve, self.users.contains(where: { $0.isAdmin && $0.email == self.payments[i].email }) {
+            let days = self.payments[i].plan.days(annual: self.payments[i].annual ?? false)
+            self.paidUntil = max(self.paidUntil, Date()).addingTimeInterval(days * 86400)
         }
         show(approve ? "Pago aprobado. El plan quedó activo." : "Pago rechazado. Avísale al cliente qué falló.")
     }
 
     func savePaySettings(_ settings: PaymentSettings) {
         var updated = settings
-        if settings.rateEur != state.pay.rateEur || settings.rateUsd != state.pay.rateUsd {
+        if settings.rateEur != self.pay.rateEur || settings.rateUsd != self.pay.rateUsd {
             updated.rateDate = Date()
         }
-        state.pay = updated
+        self.pay = updated
     }
 
     // MARK: - Chats
 
     func togglePin(_ id: UUID) {
-        guard let i = state.chats.firstIndex(where: { $0.id == id }) else { return }
-        state.chats[i].pinned.toggle()
-        show(state.chats[i].pinned ? "Chat fijado" : "Chat quitado de fijados")
+        guard let i = self.chats.firstIndex(where: { $0.id == id }) else { return }
+        self.chats[i].pinned.toggle()
+        show(self.chats[i].pinned ? "Chat fijado" : "Chat quitado de fijados")
     }
 
     func renameChat(_ id: UUID, to title: String) {
         let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty, let i = state.chats.firstIndex(where: { $0.id == id }) else { return }
-        state.chats[i].title = clean
+        guard !clean.isEmpty, let i = self.chats.firstIndex(where: { $0.id == id }) else { return }
+        self.chats[i].title = clean
         show("Chat renombrado")
     }
 
     func move(chat id: UUID, projectID: UUID?, folderID: UUID?) {
-        guard let i = state.chats.firstIndex(where: { $0.id == id }) else { return }
-        state.chats[i].projectID = projectID
-        state.chats[i].folderID = folderID
+        guard let i = self.chats.firstIndex(where: { $0.id == id }) else { return }
+        self.chats[i].projectID = projectID
+        self.chats[i].folderID = folderID
         show("Chat movido")
     }
 
     func deleteChat(_ id: UUID) {
-        state.chats.removeAll { $0.id == id }
+        self.chats.removeAll { $0.id == id }
         if case .chat(let current)? = route, current == id { route = .home }
         show("Chat eliminado")
     }
 
     func deleteAllChats() {
         stop()
-        state.chats.removeAll()
+        self.chats.removeAll()
         route = .home
         show("Borraste todos tus chats")
     }
@@ -1561,58 +1711,58 @@ final class AppStore {
     @discardableResult
     func createProject(name: String, desc: String, colorHex: UInt32) -> UUID {
         let project = Project(name: name, desc: desc, colorHex: colorHex, instructions: "", files: [], created: Date())
-        state.projects.append(project)
+        self.projects.append(project)
         route = .project(project.id)
         show("Proyecto creado")
         return project.id
     }
 
     func updateProject(_ id: UUID, name: String, desc: String, colorHex: UInt32) {
-        guard let i = state.projects.firstIndex(where: { $0.id == id }) else { return }
-        state.projects[i].name = name
-        state.projects[i].desc = desc
-        state.projects[i].colorHex = colorHex
+        guard let i = self.projects.firstIndex(where: { $0.id == id }) else { return }
+        self.projects[i].name = name
+        self.projects[i].desc = desc
+        self.projects[i].colorHex = colorHex
         show("Proyecto actualizado")
     }
 
     func deleteProject(_ id: UUID) {
-        for i in state.chats.indices where state.chats[i].projectID == id { state.chats[i].projectID = nil }
-        state.projects.removeAll { $0.id == id }
+        for i in self.chats.indices where self.chats[i].projectID == id { self.chats[i].projectID = nil }
+        self.projects.removeAll { $0.id == id }
         route = .home
         show("Proyecto eliminado")
     }
 
     func addFiles(_ urls: [URL], to projectID: UUID) {
-        guard let i = state.projects.firstIndex(where: { $0.id == projectID }) else { return }
+        guard let i = self.projects.firstIndex(where: { $0.id == projectID }) else { return }
         for url in urls {
             let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-            state.projects[i].files.append(ProjectFile(name: url.lastPathComponent, size: Self.sizeText(bytes)))
+            self.projects[i].files.append(ProjectFile(name: url.lastPathComponent, size: Self.sizeText(bytes)))
         }
         show(urls.count == 1 ? "Agregaste \(urls[0].lastPathComponent)" : "Agregaste \(urls.count) archivos")
     }
 
     func removeFile(projectID: UUID, fileID: UUID) {
-        guard let i = state.projects.firstIndex(where: { $0.id == projectID }) else { return }
-        state.projects[i].files.removeAll { $0.id == fileID }
+        guard let i = self.projects.firstIndex(where: { $0.id == projectID }) else { return }
+        self.projects[i].files.removeAll { $0.id == fileID }
     }
 
     func createFolder(_ name: String) {
         let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else { return }
-        state.folders.append(Folder(name: clean))
+        self.folders.append(Folder(name: clean))
         show("Carpeta creada")
     }
 
     func renameFolder(_ id: UUID, to name: String) {
         let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty, let i = state.folders.firstIndex(where: { $0.id == id }) else { return }
-        state.folders[i].name = clean
+        guard !clean.isEmpty, let i = self.folders.firstIndex(where: { $0.id == id }) else { return }
+        self.folders[i].name = clean
         show("Carpeta renombrada")
     }
 
     func deleteFolder(_ id: UUID) {
-        for i in state.chats.indices where state.chats[i].folderID == id { state.chats[i].folderID = nil }
-        state.folders.removeAll { $0.id == id }
+        for i in self.chats.indices where self.chats[i].folderID == id { self.chats[i].folderID = nil }
+        self.folders.removeAll { $0.id == id }
         show("Carpeta eliminada")
     }
 
@@ -1626,25 +1776,39 @@ final class AppStore {
     // MARK: - Admin
 
     func toggleSuspension(_ userID: UUID) {
-        guard let i = state.users.firstIndex(where: { $0.id == userID }), !state.users[i].isAdmin else { return }
-        if state.users[i].status == .suspendido {
-            state.users[i].status = .activo
-            show("\(state.users[i].name) puede volver a usar Kuolki")
+        guard let i = self.users.firstIndex(where: { $0.id == userID }), !self.users[i].isAdmin else { return }
+        if self.users[i].status == .suspendido {
+            self.users[i].status = .activo
+            show("\(self.users[i].name) puede volver a usar Kuolki")
         } else {
-            state.users[i].status = .suspendido
-            show("Suspendiste a \(state.users[i].name)")
+            self.users[i].status = .suspendido
+            show("Suspendiste a \(self.users[i].name)")
         }
     }
 
     func saveAdmin(_ config: AdminConfig) {
-        state.admin = config
-        state.usage.advCap = config.advCap
-        state.usage.weekCap = config.weekCap
-        state.usage.fastCap = config.fastCap
-        state.usage.creditsCap = config.creditsCap
-        if !config.enabledEngines.contains(state.prefs.engine), let first = enabledEngines.first {
-            state.prefs.engine = first
+        self.admin = config
+        self.usage.advCap = config.advCap
+        self.usage.weekCap = config.weekCap
+        self.usage.fastCap = config.fastCap
+        self.usage.creditsCap = config.creditsCap
+        if !config.enabledEngines.contains(self.prefs.engine), let first = enabledEngines.first {
+            self.prefs.engine = first
         }
         show("Cambios guardados. Se aplican a todos los planes desde ahora.")
+    }
+}
+
+/// Writes the saved data one write at a time, away from the screen.
+actor StateFile {
+    static let shared = StateFile()
+
+    func queue(_ state: AppState, to url: URL) {
+        Self.write(state, to: url)
+    }
+
+    nonisolated static func write(_ state: AppState, to url: URL) {
+        guard let data = try? JSONEncoder().encode(state) else { return }
+        try? data.write(to: url, options: .atomic)
     }
 }

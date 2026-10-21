@@ -202,8 +202,8 @@ struct ProjectView: View {
         Binding(
             get: { store.project(projectID)?.instructions ?? "" },
             set: { newValue in
-                if let index = store.state.projects.firstIndex(where: { $0.id == projectID }) {
-                    store.state.projects[index].instructions = newValue
+                if let index = store.projects.firstIndex(where: { $0.id == projectID }) {
+                    store.projects[index].instructions = newValue
                 }
             }
         )

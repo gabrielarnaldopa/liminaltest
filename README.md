@@ -4,6 +4,17 @@ App de chat en SwiftUI (iOS 17 o superior): inicio de sesión de administración
 
 ## Novedades de esta versión
 
+- **Apariencia que funciona al instante:** el tema (Sistema, Claro, Oscuro), la letra y el tamaño cambian en el momento, también dentro de Ajustes. Tres letras: **Kuolki** (Bricolage Grotesque), **Sistema** (la del iPhone) y **Clásica** (con serifa). La vista previa muestra un chat real con lo que elegiste. El tamaño ahora se nota más (Pequeña, Normal, Grande).
+- **Más rápida:** cada parte de los datos (chats, ajustes, uso, plan…) se observa por separado, así que escribir o recibir una respuesta ya no redibuja toda la app; el guardado va en segundo plano. El menú lateral es sólido (sin cristal ni sombra en vivo), no mueve la pantalla de atrás y solo se dibuja cuando se ve: sigue el dedo sin tirones.
+- **Pantalla de carga** de 0,8 s con el logo y el nombre de Kuolki.
+- **Ajustes con el diseño nuevo:** tarjetas blancas de esquinas grandes, íconos de línea (sin cuadros de color), títulos de sección normales y botón redondo para cerrar.
+- **Inicio centrado** en la pantalla.
+- **Elegir el modelo** y el botón **+** abren una hoja desde abajo: a media altura lo principal y, deslizando hacia arriba, todas las opciones (modo, razonamiento, chat temporal, fotos recientes, búsqueda, imágenes, conectores…).
+
+- **Planes nuevos:** Gratis, Semanal $4, Mensual $12, Mensual 5× $59 y Mensual 20× $199, con IVA incluido. El Mensual, el 5× y el 20× también se pagan por año ($120, $588 y $2.148). Se cambian en Ajustes › Plan y pagos. El Gratis solo tiene el modo rápido.
+- **Elige cómo pagar:** al tocar Pagar, la persona elige **Pagar con Apple** (suscripción de la App Store) o **Pagar en la web** (abre tu app web en Safari, con su cuenta y el plan elegido, para pagar con Pago Móvil, USDT, USDC o tarjeta). También está **Restaurar compras de Apple**.
+- Para vender solo con Apple, cambia `Brand.webPayButton` a `false` en `Models.swift` y vuelve a compilar.
+
 - **iPhone rehecho como en los videos:** barra de cristal arriba (menú, «Lithium 1.1» y dos botones) que cabe en cualquier iPhone, también con Zoom de pantalla; ya no se encima nada.
 - **Menú lateral que sigue tu dedo:** desliza a la derecha en cualquier parte para abrirlo y a la izquierda (o toca afuera) para cerrarlo. Los chats van en filas simples, sin cuadros; mantén presionado un chat para fijarlo, renombrarlo, moverlo o eliminarlo.
 - **Inicio con el cuadro de texto al centro**, como en la web; en el chat queda flotando abajo, de cristal.
@@ -114,10 +125,38 @@ Abre Terminal en esta carpeta y escribe `bash compilar-ipa.sh`. Deja `Kuolki.ipa
 
 ## Pagos
 
-- **Pago Móvil** en bolívares a la tasa oficial del euro del BCV (o la del dólar, si la cambias en Administración › Planes › Cobros). Con la tasa del 14 de octubre de 2026 (Bs 982,76 por euro), el plan de $11 queda en Bs 10.810,36.
+### Pagar con Apple (App Store)
+
+La app vende los planes como suscripciones de la App Store (StoreKit 2). Para que funcionen:
+
+1. Firma el **Paid Applications Agreement** en App Store Connect › Business, con tus datos bancarios y fiscales. Si tu banco no aparece en la lista, Apple no puede pagarte ahí.
+2. Inscríbete en el **App Store Small Business Program**: Apple cobra 15 % en vez de 30 %.
+3. En App Store Connect › tu app › Suscripciones, crea un grupo llamado **Kuolki** con estas 7 suscripciones (los códigos tienen que ser exactamente estos):
+
+| Código del producto | Plan | Duración | Precio sugerido |
+|---|---|---|---|
+| `kuolki.semanal` | Semanal | 1 semana | $4,00 |
+| `kuolki.mensual` | Mensual | 1 mes | $12,00 |
+| `kuolki.mensual.anual` | Mensual anual | 1 año | $120,00 |
+| `kuolki.5x` | Mensual 5× | 1 mes | $59,00 |
+| `kuolki.5x.anual` | Mensual 5× anual | 1 año | $588,00 |
+| `kuolki.20x` | Mensual 20× | 1 mes | $199,00 |
+| `kuolki.20x.anual` | Mensual 20× anual | 1 año | $2.148,00 |
+
+   Ordénalas en el grupo de mayor a menor (20× anual arriba, Semanal abajo) para que Apple sepa qué es subir o bajar de plan. Puedes poner precios un poco más altos que en la web para cubrir la comisión.
+4. **Para probar sin App Store Connect:** en Xcode, Product › Scheme › Edit Scheme › Run › Options › StoreKit Configuration › elige `Kuolki.storekit` (está junto a este README). Así puedes comprar de prueba en el simulador o en tu iPhone conectado.
+
+Cada compra lleva un identificador fijo de la cuenta (`appAccountToken`), para que el servidor pueda confirmarla con Apple cuando los pagos se muevan allá.
+
+### Pagar en la web
+
+El botón abre en Safari la app web (la dirección de Administración › Kuolki Dev, o `https://gabrielarnaldopa.github.io/kuolki/` si está vacía) con la cuenta y el plan elegidos, directo en «Pagar tu plan»:
+
+- **Pago Móvil** en bolívares a la tasa oficial del euro del BCV (o la del dólar, si la cambias en Administración › Planes › Cobros).
 - **USDT** (Tron o Solana), **USDC** (Base o Solana) y **tarjeta** (en la página segura del procesador; Kuolki nunca ve la tarjeta).
-- Los pagos quedan pendientes y se aprueban o rechazan en Administración › Pagos. Configura ahí tus datos de Pago Móvil y tus direcciones antes de cobrar.
-- El servidor debe actualizar la tasa cada día desde el BCV.
+- Los pagos quedan pendientes y se aprueban en Administración › Pagos. Configura ahí tus datos de Pago Móvil y tus direcciones antes de cobrar.
+
+**Ojo con la revisión de Apple:** fuera de Estados Unidos, las reglas de la App Store (3.1.1) no permiten un botón que lleve a pagar fuera de la app. Apple puede rechazar la versión por ese botón. Si te lo exige, cambia `Brand.webPayButton` a `false` en `Models.swift`, compila y vuelve a enviarla.
 
 ## Acceso de administración
 

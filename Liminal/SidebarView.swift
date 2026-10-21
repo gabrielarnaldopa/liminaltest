@@ -213,7 +213,7 @@ struct SideMenu: View {
     @ViewBuilder
     private var projectsSection: some View {
         SectionTitle(text: "Proyectos", addLabel: "Nuevo proyecto") { showNewProject = true }
-        ForEach(store.state.projects) { project in
+        ForEach(store.projects) { project in
             let selected = store.route == .project(project.id)
             let count = store.visibleChats.filter { $0.projectID == project.id }.count
             Button {
@@ -240,7 +240,7 @@ struct SideMenu: View {
             .accessibilityLabel("\(project.name), \(count) chats")
             .accessibilityAddTraits(selected ? .isSelected : [])
         }
-        if store.state.projects.isEmpty {
+        if store.projects.isEmpty {
             MenuRow(title: "Crea tu primer proyecto", icon: "plus", muted: true) { showNewProject = true }
         }
     }
@@ -248,7 +248,7 @@ struct SideMenu: View {
     @ViewBuilder
     private var foldersSection: some View {
         SectionTitle(text: "Carpetas", addLabel: "Nueva carpeta") { showNewFolder = true }
-        ForEach(store.state.folders) { folder in
+        ForEach(store.folders) { folder in
             let chats = store.visibleChats.filter { $0.folderID == folder.id && !$0.pinned }
             let open = expandedFolders.contains(folder.id)
             Button {
@@ -369,7 +369,7 @@ struct SideMenu: View {
     // MARK: - Footer: usage and account
 
     private var footer: some View {
-        let name = store.state.prefs.name.isEmpty ? (auth.session?.name ?? "Tú") : store.state.prefs.name
+        let name = store.prefs.name.isEmpty ? (auth.session?.name ?? "Tú") : store.prefs.name
         let percent = store.sessionPercent
         return VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
@@ -392,7 +392,7 @@ struct SideMenu: View {
                     }
                 }
                 .frame(height: 5)
-                Text("Se recarga \(Fmt.relative(store.state.usage.sessionResetAt ?? Date()))")
+                Text("Se recarga \(Fmt.relative(store.usage.sessionResetAt ?? Date()))")
                     .font(.k(.caption))
                     .foregroundStyle(Palette.ink3)
             }
@@ -417,7 +417,7 @@ struct SideMenu: View {
                                 RoleBadge()
                             }
                         }
-                        Text("Plan \(store.state.prefs.plan.name.lowercased()) · Ajustes")
+                        Text("Plan \(store.prefs.plan.name.lowercased()) · Ajustes")
                             .font(.k(.caption))
                             .foregroundStyle(Palette.ink3)
                             .lineLimit(1)
@@ -626,7 +626,7 @@ struct MoveChatSheet: View {
                 Section {
                     Picker("Proyecto", selection: $projectID) {
                         Text("Ninguno").tag(UUID?.none)
-                        ForEach(store.state.projects) { project in
+                        ForEach(store.projects) { project in
                             Text(project.name).tag(UUID?.some(project.id))
                         }
                     }
@@ -636,7 +636,7 @@ struct MoveChatSheet: View {
                 Section {
                     Picker("Carpeta", selection: $folderID) {
                         Text("Ninguna").tag(UUID?.none)
-                        ForEach(store.state.folders) { folder in
+                        ForEach(store.folders) { folder in
                             Text(folder.name).tag(UUID?.some(folder.id))
                         }
                     }

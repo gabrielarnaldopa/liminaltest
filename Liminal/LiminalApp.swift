@@ -6,6 +6,7 @@ import UIKit
 struct LiminalApp: App {
     @State private var auth = AuthService()
     @State private var store = AppStore()
+    @State private var purchases = Purchases()
 
     init() {
         KFont.applyToBars()
@@ -16,6 +17,7 @@ struct LiminalApp: App {
             RootView()
                 .environment(auth)
                 .environment(store)
+                .environment(purchases)
         }
         // iOS wakes the app here when an answer finishes on the server while the app is closed.
         .backgroundTask(.urlSession(BackgroundJobs.identifier)) { _ in
@@ -28,12 +30,17 @@ struct LiminalApp: App {
 struct RootView: View {
     @Environment(AuthService.self) private var auth
     @Environment(AppStore.self) private var store
+    @Environment(Purchases.self) private var purchases
     @Environment(\.scenePhase) private var scenePhase
+    @State private var splash = true
 
     var body: some View {
         ZStack {
             if auth.session != nil {
+                // A new typeface redraws every screen; the sheets (Ajustes) stay open above them.
                 MainView()
+                    .id(store.prefs.fontFamily ?? .kuolki)
+                    .appSheets()
                     .transition(.opacity)
             } else {
                 LoginView()
@@ -42,17 +49,30 @@ struct RootView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: auth.session == nil)
         .overlay(alignment: .bottom) { ToastView() }
-        .preferredColorScheme(store.state.prefs.theme.colorScheme)
+        .overlay {
+            if splash {
+                SplashView()
+                    .transition(.opacity)
+                    .task {
+                        try? await Task.sleep(for: .milliseconds(800))
+                        withAnimation(.easeOut(duration: 0.3)) { splash = false }
+                    }
+            }
+        }
+        .preferredColorScheme(store.prefs.theme.colorScheme)
         .font(.k(.body))
-        .dynamicTypeSize(store.state.prefs.fontScale.dynamicTypeSize)
+        .dynamicTypeSize(store.prefs.fontScale.dynamicTypeSize)
         .environment(\.locale, Fmt.locale)
         .tint(Palette.ink)
-        .onChange(of: store.state) { store.scheduleSave() }
         .onOpenURL { url in store.open(url) }
         .task {
             AppStore.deviceName = "\(UIDevice.current.model) · app de Kuolki"
             store.accountEmail = auth.session?.email
+            KFont.applyToBars()
             store.appBecameActive()
+            purchases.start { plan, annual, until, transaction in
+                store.activateApplePlan(plan, annual: annual, until: until, transactionID: transaction)
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -117,7 +137,6 @@ struct MainView: View {
             withAnimation { columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly }
             store.drawerOpen = false
         }
-        .appSheets()
     }
 }
 

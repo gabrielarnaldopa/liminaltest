@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 import UIKit
 
 struct SettingsView: View {
@@ -8,84 +9,77 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    HStack(spacing: 14) {
-                        Avatar(name: displayName, size: 52)
-                        VStack(alignment: .leading, spacing: 3) {
-                            HStack(spacing: 6) {
-                                Text(displayName)
-                                    .font(.k(.headline))
-                                    .foregroundStyle(Palette.ink)
-                                if auth.session?.isAdmin == true {
-                                    RoleBadge()
+            ScrollView {
+                VStack(spacing: 22) {
+                    SheetCard {
+                        HStack(spacing: 14) {
+                            Avatar(name: displayName, size: 54)
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack(spacing: 6) {
+                                    Text(displayName)
+                                        .font(.k(.headline))
+                                        .foregroundStyle(Palette.ink)
+                                    if auth.session?.isAdmin == true {
+                                        RoleBadge()
+                                    }
                                 }
+                                Text(auth.session?.email ?? "")
+                                    .font(.k(.subheadline))
+                                    .foregroundStyle(Palette.ink3)
+                                    .lineLimit(1)
+                                StatusChip(text: "Plan \(store.prefs.plan.name.lowercased()) activo", level: .good)
+                                    .padding(.top, 4)
                             }
-                            Text(auth.session?.email ?? "")
-                                .font(.k(.subheadline))
-                                .foregroundStyle(Palette.ink3)
-                            StatusChip(text: "Plan \(store.state.prefs.plan.name.lowercased()) activo", level: .good)
-                                .padding(.top, 4)
+                            Spacer(minLength: 0)
                         }
+                        .padding(18)
                     }
-                    .padding(.vertical, 4)
-                }
 
-                Section {
-                    settingsLink("General", icon: "gearshape") { GeneralSettings() }
-                    settingsLink("Apariencia", icon: "circle.lefthalf.filled") { AppearanceSettings() }
-                    settingsLink("Modelos y modos", icon: "cpu") { ModelSettings() }
-                    settingsLink("Navegación", icon: "globe") { NavigationSettings() }
-                    settingsLink("Voz e Isla Dinámica", icon: "waveform") { VoiceSettings() }
-                    settingsLink("Memoria", icon: "brain") { MemorySettings() }
-                    settingsLink("Conectores", icon: "puzzlepiece.extension") { ConnectorsSettings() }
-                    settingsLink("Privacidad", icon: "lock") { PrivacySettings() }
-                }
+                    SheetCard {
+                        SettingsNavRow(title: "General", icon: "gearshape") { GeneralSettings() }
+                        SheetDivider()
+                        SettingsNavRow(title: "Apariencia", icon: "circle.lefthalf.filled") { AppearanceSettings() }
+                        SheetDivider()
+                        SettingsNavRow(title: "Modelos y modos", icon: "cpu") { ModelSettings() }
+                        SheetDivider()
+                        SettingsNavRow(title: "Navegación", icon: "globe") { NavigationSettings() }
+                        SheetDivider()
+                        SettingsNavRow(title: "Voz e Isla Dinámica", icon: "waveform") { VoiceSettings() }
+                        SheetDivider()
+                        SettingsNavRow(title: "Memoria", icon: "brain") { MemorySettings() }
+                        SheetDivider()
+                        SettingsNavRow(title: "Conectores", icon: "puzzlepiece.extension") { ConnectorsSettings() }
+                        SheetDivider()
+                        SettingsNavRow(title: "Privacidad", icon: "lock") { PrivacySettings() }
+                    }
 
-                Section {
-                    settingsLink("Plan y pagos", icon: "creditcard", flame: true) { PlanSettings() }
-                    settingsLink("Puntos de fundador", icon: "star.fill", flame: true) { PointsSettings() }
-                }
+                    SheetCard {
+                        SettingsNavRow(title: "Plan y pagos", icon: "creditcard", accent: true) { PlanSettings() }
+                        SheetDivider()
+                        SettingsNavRow(title: "Puntos de fundador", icon: "star", accent: true) { PointsSettings() }
+                    }
 
-                Section {
-                    settingsLink("Cuenta", icon: "person.crop.circle") { AccountSettings() }
+                    SheetCard {
+                        SettingsNavRow(title: "Cuenta", icon: "person.crop.circle") { AccountSettings() }
+                    }
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 30)
             }
-            .liminalList()
+            .background(Palette.bg)
             .navigationTitle("Ajustes")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Listo") { dismiss() }
+                ToolbarItem(placement: .cancellationAction) {
+                    SheetClose { dismiss() }
                 }
             }
         }
     }
 
     private var displayName: String {
-        store.state.prefs.name.isEmpty ? (auth.session?.name ?? "Tú") : store.state.prefs.name
-    }
-
-    private func settingsLink<Destination: View>(_ title: String, icon: String, flame: Bool = false,
-                                                 @ViewBuilder destination: () -> Destination) -> some View {
-        let page = destination()
-        return NavigationLink {
-            page
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 30, height: 30)
-                    .background {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(flame ? AnyShapeStyle(Palette.accentGradient) : AnyShapeStyle(Color(hex: 0x636366)))
-                    }
-                Text(title)
-                    .foregroundStyle(Palette.ink)
-            }
-            .padding(.vertical, 2)
-        }
+        store.prefs.name.isEmpty ? (auth.session?.name ?? "Tú") : store.prefs.name
     }
 }
 
@@ -99,11 +93,11 @@ struct GeneralSettings: View {
         @Bindable var store = store
         Form {
             Section("Cómo te llamamos") {
-                TextField("Tu nombre", text: $store.state.prefs.name)
+                TextField("Tu nombre", text: $store.prefs.name)
                     .textContentType(.givenName)
             }
             Section("Idioma de las respuestas") {
-                Picker("Idioma", selection: $store.state.prefs.language) {
+                Picker("Idioma", selection: $store.prefs.language) {
                     Text("Español (Latinoamérica)").tag("es-419")
                     Text("Español (España)").tag("es-ES")
                     Text("Português (Brasil)").tag("pt-BR")
@@ -111,7 +105,7 @@ struct GeneralSettings: View {
                 }
             }
             Section {
-                Picker("Tono", selection: $store.state.prefs.tone) {
+                Picker("Tono", selection: $store.prefs.tone) {
                     ForEach(Tone.allCases) { tone in
                         Text(tone.name).tag(tone)
                     }
@@ -123,27 +117,27 @@ struct GeneralSettings: View {
                 Text(toneNote)
             }
             Section {
-                TextEditor(text: $store.state.prefs.custom)
+                TextEditor(text: $store.prefs.custom)
                     .frame(minHeight: 130)
             } header: {
                 Text("Instrucciones personalizadas")
             } footer: {
-                let count = store.state.prefs.custom.count
+                let count = store.prefs.custom.count
                 Text("Kuolki las tiene en cuenta en todos tus chats. \(count) de \(customLimit) caracteres.")
                     .foregroundStyle(count >= customLimit ? Palette.yellowText : Palette.ink3)
             }
         }
         .liminalList()
         .navigationTitle("General")
-        .onChange(of: store.state.prefs.custom) { _, newValue in
+        .onChange(of: store.prefs.custom) { _, newValue in
             if newValue.count > customLimit {
-                store.state.prefs.custom = String(newValue.prefix(customLimit))
+                store.prefs.custom = String(newValue.prefix(customLimit))
             }
         }
     }
 
     private var toneNote: String {
-        switch store.state.prefs.tone {
+        switch store.prefs.tone {
         case .cercano: return "Como un amigo que sabe del tema."
         case .profesional: return "Formal y ordenado, para trabajo y estudios."
         case .directo: return "Respuestas cortas, sin rodeos."
@@ -182,8 +176,8 @@ struct VoiceSettings: View {
             }
 
             Section {
-                Toggle("Avisarme cuando termine una respuesta", isOn: Binding(get: { store.state.prefs.notify ?? true }, set: { on in
-                    store.state.prefs.notify = on
+                Toggle("Avisarme cuando termine una respuesta", isOn: Binding(get: { store.prefs.notify ?? true }, set: { on in
+                    store.prefs.notify = on
                     if on { Task { await Notifier.requestIfNeeded() } }
                 }))
                 .tint(Palette.green)
@@ -223,66 +217,151 @@ struct AppearanceSettings: View {
     @Environment(AppStore.self) private var store
 
     var body: some View {
-        @Bindable var store = store
-        Form {
-            Section("Tema") {
-                Picker("Tema", selection: $store.state.prefs.theme) {
-                    ForEach(ThemeChoice.allCases) { theme in
-                        Text(theme.name).tag(theme)
-                    }
+        let prefs = store.prefs
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                header("Tema")
+                SheetCard {
+                    segmented(ThemeChoice.allCases, selected: prefs.theme, name: \.name) { store.prefs.theme = $0 }
+                        .padding(8)
                 }
-                .pickerStyle(.segmented)
-            }
-            Section("Tamaño del texto") {
-                Picker("Tamaño", selection: $store.state.prefs.fontScale) {
-                    ForEach(FontScale.allCases) { scale in
-                        Text(scale.name).tag(scale)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-            Section("Vista previa") {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Spacer(minLength: 40)
-                        Text("¿Me ayudas con un mensaje para mis clientes?")
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Palette.bubble, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    }
-                    Text("Claro. Cuéntame qué vendes y te propongo tres versiones.")
-                }
-                .foregroundStyle(Palette.ink)
-                .padding(.vertical, 6)
-            }
-            Section {
-                colorRow(.good, "Verde", "Activo, pagado y todo en orden.")
-                colorRow(.warn, "Amarillo", "En curso, cerca de un límite y puntos.")
-                colorRow(.bad, "Rojo", "Errores, detener y borrar.")
-            } header: {
-                Text("Colores de estado")
-            } footer: {
-                Text("La interfaz es gris claro u oscuro. Los colores del semáforo de macOS solo aparecen cuando dicen algo.")
-            }
-        }
-        .liminalList()
-        .navigationTitle("Apariencia")
-    }
 
-    private func colorRow(_ level: StatusLevel, _ name: String, _ meaning: String) -> some View {
-        HStack(spacing: 12) {
-            Circle()
-                .fill(level.color)
-                .frame(width: 14, height: 14)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(name)
-                    .foregroundStyle(Palette.ink)
-                Text(meaning)
+                header("Letra")
+                SheetCard {
+                    ForEach(Array(FontFamily.allCases.enumerated()), id: \.element) { index, family in
+                        if index > 0 { SheetDivider(inset: 18) }
+                        Button {
+                            choose(family)
+                        } label: {
+                            HStack(spacing: 14) {
+                                Text("Aa")
+                                    .font(sample(family, size: 24))
+                                    .foregroundStyle(Palette.ink)
+                                    .frame(width: 44)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(family.name)
+                                        .font(sample(family, size: 17))
+                                        .foregroundStyle(Palette.ink)
+                                    Text(family.detail)
+                                        .font(.k(.subheadline))
+                                        .foregroundStyle(Palette.ink3)
+                                }
+                                Spacer(minLength: 8)
+                                if (prefs.fontFamily ?? .kuolki) == family {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 17, weight: .semibold))
+                                        .foregroundStyle(Palette.accent)
+                                }
+                            }
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 12)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                header("Tamaño del texto")
+                SheetCard {
+                    segmented(FontScale.allCases, selected: prefs.fontScale, name: \.name) { store.prefs.fontScale = $0 }
+                        .padding(8)
+                }
+
+                header("Vista previa")
+                SheetCard {
+                    VStack(alignment: .leading, spacing: 14) {
+                        HStack {
+                            Spacer(minLength: 40)
+                            Text("¿Me ayudas con un mensaje para mis clientes?")
+                                .font(.k(.body))
+                                .foregroundStyle(Palette.ink)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(Palette.bubble, in: UnevenRoundedRectangle(topLeadingRadius: 22, bottomLeadingRadius: 22,
+                                                                                         bottomTrailingRadius: 8, topTrailingRadius: 22,
+                                                                                         style: .continuous))
+                        }
+                        HStack(spacing: 6) {
+                            LogoMark().fill(Palette.ink).frame(width: 15, height: 15)
+                            Text(Brand.modelName)
+                                .font(.k(.subheadline).weight(.semibold))
+                                .foregroundStyle(Palette.ink)
+                        }
+                        Text("Claro. Cuéntame qué vendes y te propongo tres versiones: una corta para WhatsApp, una para Instagram y una más formal.")
+                            .font(.k(.body))
+                            .foregroundStyle(Palette.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(18)
+                }
+                Text("Así se ven tus chats con el tema, la letra y el tamaño que elegiste.")
                     .font(.k(.footnote))
                     .foregroundStyle(Palette.ink3)
+                    .padding(.horizontal, 18)
+                    .padding(.top, 8)
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 30)
+        }
+        .background(Palette.bg)
+        .navigationTitle("Apariencia")
+        .navigationBarTitleDisplayMode(.inline)
+        .animation(.easeInOut(duration: 0.2), value: prefs.fontScale)
+    }
+
+    private func header(_ text: String) -> some View {
+        Text(text)
+            .font(.k(.subheadline).weight(.medium))
+            .foregroundStyle(Palette.ink3)
+            .padding(.horizontal, 18)
+            .padding(.top, 22)
+            .padding(.bottom, 8)
+    }
+
+    /// Three choices side by side; the chosen one stands out.
+    private func segmented<T: Hashable>(_ options: [T], selected: T, name: KeyPath<T, String>,
+                                        pick: @escaping (T) -> Void) -> some View {
+        HStack(spacing: 4) {
+            ForEach(options, id: \.self) { option in
+                Button {
+                    pick(option)
+                } label: {
+                    Text(option[keyPath: name])
+                        .font(.k(.subheadline).weight(option == selected ? .semibold : .regular))
+                        .foregroundStyle(Palette.ink)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background {
+                            if option == selected {
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .fill(Palette.raised)
+                                    .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(option == selected ? .isSelected : [])
             }
         }
-        .accessibilityElement(children: .combine)
+        .padding(4)
+        .background(Palette.sunk, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    /// Each typeface written in itself.
+    private func sample(_ family: FontFamily, size: CGFloat) -> Font {
+        switch family {
+        case .kuolki: return .custom(KFont.text, size: size).weight(.semibold)
+        case .sistema: return .system(size: size, weight: .semibold)
+        case .clasica: return .system(size: size, weight: .semibold, design: .serif)
+        }
+    }
+
+    /// The typeface changes before anything redraws, so the whole app switches at once.
+    private func choose(_ family: FontFamily) {
+        KFont.family = family
+        KFont.applyToBars()
+        store.prefs.fontFamily = family
     }
 }
 
@@ -295,7 +374,7 @@ struct ModelSettings: View {
         @Bindable var store = store
         Form {
             Section {
-                Picker("Modelo", selection: $store.state.prefs.tier) {
+                Picker("Modelo", selection: $store.prefs.tier) {
                     ForEach(Tier.allCases) { tier in
                         Text(tier.name).tag(tier)
                     }
@@ -304,14 +383,14 @@ struct ModelSettings: View {
             } header: {
                 Text("Modelo")
             } footer: {
-                Text(store.state.prefs.tier == .adv
+                Text(store.prefs.tier == .adv
                      ? "Razona antes de responder. Usa tu ventana de 5 horas."
                      : "Responde al instante. Tiene su propio límite diario.")
             }
 
-            if store.state.prefs.tier == .adv {
+            if store.prefs.tier == .adv {
                 Section {
-                    Picker("Esfuerzo", selection: $store.state.prefs.effort) {
+                    Picker("Esfuerzo", selection: $store.prefs.effort) {
                         ForEach(Effort.allCases) { effort in
                             Text(effort.name).tag(effort)
                         }
@@ -320,8 +399,8 @@ struct ModelSettings: View {
                 } header: {
                     Text("Esfuerzo")
                 } footer: {
-                    Text(store.state.prefs.effort.note)
-                        .foregroundStyle(store.state.prefs.effort == .alto ? Palette.yellowText : Palette.ink3)
+                    Text(store.prefs.effort.note)
+                        .foregroundStyle(store.prefs.effort == .alto ? Palette.yellowText : Palette.ink3)
                 }
             }
 
@@ -332,12 +411,12 @@ struct ModelSettings: View {
             }
 
             Section {
-                Picker("Modo al empezar", selection: $store.state.prefs.defaultMode) {
+                Picker("Modo al empezar", selection: $store.prefs.defaultMode) {
                     ForEach(ChatMode.allCases) { mode in
                         Label(mode.name, systemImage: mode.icon).tag(mode)
                     }
                 }
-                Toggle("Mostrar el razonamiento", isOn: $store.state.prefs.showThinking)
+                Toggle("Mostrar el razonamiento", isOn: $store.prefs.showThinking)
                     .tint(Palette.green)
             } header: {
                 Text("Modos")
@@ -360,9 +439,9 @@ struct PrivacySettings: View {
         @Bindable var store = store
         Form {
             Section {
-                Toggle("Guardar el historial de chats", isOn: $store.state.prefs.saveHistory)
+                Toggle("Guardar el historial de chats", isOn: $store.prefs.saveHistory)
                     .tint(Palette.green)
-                Toggle("Empezar siempre en chat temporal", isOn: $store.state.prefs.tempDefault)
+                Toggle("Empezar siempre en chat temporal", isOn: $store.prefs.tempDefault)
                     .tint(Palette.green)
             } header: {
                 Text("Historial")
@@ -374,8 +453,8 @@ struct PrivacySettings: View {
                 NavigationLink {
                     MemorySettings()
                 } label: {
-                    LabeledContent("Memoria", value: store.state.prefs.memory
-                                   ? "Activa · \(store.state.memories.count) datos" : "Apagada")
+                    LabeledContent("Memoria", value: store.prefs.memory
+                                   ? "Activa · \(store.memories.count) datos" : "Apagada")
                 }
             }
 
@@ -401,7 +480,7 @@ struct PrivacySettings: View {
             Section("Nuestro compromiso") {
                 promise("Sin anuncios y sin vender tus datos.")
                 promise("No entrenamos modelos con tus chats.")
-                promise("Pagas con USDT o USDC, sin tarjeta.")
+                promise("Pagas con Apple o en la web con Pago Móvil, USDT, USDC o tarjeta.")
             }
         }
         .liminalList()
@@ -430,26 +509,29 @@ struct PrivacySettings: View {
 struct PlanSettings: View {
     @Environment(AppStore.self) private var store
     @Environment(AuthService.self) private var auth
-    @State private var showPayment = false
+    @State private var showCheckout = false
 
     var body: some View {
         @Bindable var store = store
-        let usage = store.state.usage
+        let usage = store.usage
+        let plan = store.prefs.plan
         Form {
             Section {
                 HStack(alignment: .firstTextBaseline) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Plan \(store.state.prefs.plan.name.lowercased())")
+                        Text("Plan \(store.planLabel.lowercased())")
                             .font(.k(.headline))
                             .foregroundStyle(Palette.ink)
-                        Text(price(for: store.state.prefs.plan))
+                        Text(plan.isFree ? "Modo rápido con un límite por sesión y por semana" : priceLine(plan, annual: store.isAnnual))
                             .font(.k(.subheadline))
                             .foregroundStyle(Palette.ink3)
                     }
                     Spacer()
                     StatusChip(text: "Activo", level: .good)
                 }
-                LabeledContent("Pagado hasta", value: Fmt.day(store.state.paidUntil))
+                if !plan.isFree {
+                    LabeledContent("Pagado hasta", value: Fmt.day(store.paidUntil))
+                }
             }
 
             Section("Tu uso") {
@@ -461,33 +543,42 @@ struct PlanSettings: View {
                     .font(.k(.caption)).foregroundStyle(Palette.ink3)
                 UsageMeter(title: "Créditos para imágenes y video", used: usage.credits, cap: usage.creditsCap,
                            detail: "Imagen: 1 crédito · Video de 5 s: 5 créditos · Se renuevan el \(Fmt.day(usage.creditsResetAt))")
-                Button {
-                    store.show("Demostración: aquí pagarías \(Fmt.money(ExtraPack.price)) en USDT o USDC y se sumarían \(ExtraPack.credits) créditos.")
-                } label: {
-                    LabeledContent("Paquete de \(ExtraPack.credits) créditos", value: Fmt.money(ExtraPack.price))
-                        .foregroundStyle(Palette.ink)
-                }
             }
 
             Section {
-                Picker("Plan", selection: $store.state.prefs.plan) {
-                    ForEach(PlanKind.allCases) { plan in
-                        Text("\(plan.name) · \(price(for: plan))").tag(plan)
-                    }
+                Picker("Cómo pagar", selection: Binding(get: { store.prefs.annual ?? false },
+                                                        set: { store.prefs.annual = $0 })) {
+                    Text("Mensual").tag(false)
+                    Text("Anual").tag(true)
                 }
-                Button {
-                    showPayment = true
-                } label: {
-                    Label("Pagar \(Fmt.money(store.planPrice))", systemImage: "creditcard")
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Palette.ink)
+                .pickerStyle(.segmented)
+                ForEach(PlanKind.allCases) { option in
+                    Button {
+                        store.prefs.plan = option
+                    } label: {
+                        PlanChoiceRow(plan: option, annual: store.prefs.annual ?? false,
+                                      admin: store.admin, selected: option == plan)
+                    }
+                    .buttonStyle(.plain)
                 }
             } header: {
-                Text("Pagar")
+                Text("Cambiar o renovar")
             } footer: {
-                Text(store.paymentRegion == "VE"
-                     ? "Pago Móvil en bolívares a la tasa oficial del \(store.state.pay.useEuroRate ? "euro" : "dólar") (\(Fmt.bolivares(store.amountInBolivares)) hoy), USDT, USDC o tarjeta."
-                     : "Tarjeta de débito o crédito, USDT o USDC.")
+                Text("Precios con IVA incluido. Pagando el año te ahorras hasta 2 meses. \(plan.research).")
+            }
+
+            if !plan.isFree {
+                Section {
+                    Button {
+                        showCheckout = true
+                    } label: {
+                        Label("Pagar \(Fmt.money(store.planPrice))", systemImage: "creditcard")
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Palette.ink)
+                    }
+                } footer: {
+                    Text(store.showsWebPay ? "Con tu cuenta de Apple, o en la web con Pago Móvil, USDT, USDC o tarjeta." : "Con tu cuenta de Apple.")
+                }
             }
 
             Section("Historial de pagos") {
@@ -500,7 +591,7 @@ struct PlanSettings: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(payment.amount)
                                 .foregroundStyle(Palette.ink)
-                            Text("\(Fmt.day(payment.date)) · \(payment.method)")
+                            Text("\(Fmt.day(payment.date)) · \(payment.plan.name)\(payment.annual == true ? " anual" : "") · \(payment.method)")
                                 .font(.k(.caption))
                                 .foregroundStyle(Palette.ink3)
                         }
@@ -512,20 +603,62 @@ struct PlanSettings: View {
         }
         .liminalList()
         .navigationTitle("Plan y pagos")
-        .sheet(isPresented: $showPayment) {
-            PaymentSheet()
+        .sheet(isPresented: $showCheckout) {
+            CheckoutSheet()
         }
     }
 
     private var myPayments: [Payment] {
         let email = auth.session?.email ?? ""
-        return store.state.payments.filter { $0.email == email }.sorted { $0.date > $1.date }
+        return store.payments.filter { $0.email == email }.sorted { $0.date > $1.date }
     }
 
-    private func price(for plan: PlanKind) -> String {
+    private func priceLine(_ plan: PlanKind, annual: Bool) -> String {
+        let total = plan.price(annual: annual, admin: store.admin)
+        return annual && plan.hasAnnual ? "\(Fmt.money(total)) al año" : "\(Fmt.money(total)) \(plan.unit)"
+    }
+}
+
+/// One plan to pick: name, price and what it is for.
+struct PlanChoiceRow: View {
+    let plan: PlanKind
+    let annual: Bool
+    let admin: AdminConfig
+    let selected: Bool
+
+    var body: some View {
+        let yearly = annual && plan.hasAnnual
+        let total = plan.price(annual: yearly, admin: admin)
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(plan.name)
+                    .font(.k(.body).weight(.semibold))
+                    .foregroundStyle(Palette.ink)
+                Text(detail(yearly: yearly, total: total))
+                    .font(.k(.caption))
+                    .foregroundStyle(Palette.ink3)
+            }
+            Spacer(minLength: 8)
+            Text(Fmt.money(yearly ? total / 12 : total))
+                .font(.k(.title3).weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(Palette.ink)
+            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                .font(.k(.title3))
+                .foregroundStyle(selected ? Palette.ink : Palette.ink3)
+                .accessibilityHidden(true)
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private func detail(yearly: Bool, total: Double) -> String {
         switch plan {
-        case .mensual: return "\(Fmt.money(store.state.admin.priceMonthly)) al mes"
-        case .semanal: return "\(Fmt.money(store.state.admin.priceWeekly)) a la semana"
+        case .gratis: return "Solo modo rápido"
+        case .semanal: return annual ? "Solo se paga por semana" : "Por semana"
+        default: return yearly ? "Al mes · \(Fmt.money(total)) al año" : "Al mes"
         }
     }
 }
@@ -545,7 +678,7 @@ struct PointsSettings: View {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Image(systemName: "star.fill")
                             .foregroundStyle(Palette.yellow)
-                        Text(Fmt.int(store.state.points))
+                        Text(Fmt.int(store.points))
                             .font(.system(size: 40, weight: .semibold, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(Palette.ink)
@@ -560,24 +693,24 @@ struct PointsSettings: View {
 
             Section("Tu código para invitar") {
                 HStack {
-                    Text(store.state.referralCode)
+                    Text(store.referralCode)
                         .font(.body.monospaced())
                         .foregroundStyle(Palette.ink)
                     Spacer()
                     Button("Copiar") {
-                        UIPasteboard.general.string = store.state.referralCode
+                        UIPasteboard.general.string = store.referralCode
                         store.show("Código copiado")
                     }
                     .buttonStyle(.borderless)
                 }
-                ShareLink(item: "Prueba Kuolki, una IA en español a precio justo. Usa mi código \(store.state.referralCode).") {
+                ShareLink(item: "Prueba Kuolki, una IA en español a precio justo. Usa mi código \(store.referralCode).") {
                     Label("Compartir invitación", systemImage: "square.and.arrow.up")
                         .foregroundStyle(Palette.ink)
                 }
             }
 
             Section("Historial") {
-                ForEach(store.state.pointsHistory) { entry in
+                ForEach(store.pointsHistory) { entry in
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(entry.reason)
@@ -690,7 +823,7 @@ struct MemorySettings: View {
         @Bindable var store = store
         Form {
             Section {
-                Toggle("Usar memoria", isOn: $store.state.prefs.memory)
+                Toggle("Usar memoria", isOn: $store.prefs.memory)
                     .tint(Palette.green)
             } footer: {
                 Text("Lithium recuerda lo importante entre chats: tu nombre, tu negocio y cómo te gusta que responda. También puedes decirle «recuerda que…».")
@@ -713,7 +846,7 @@ struct MemorySettings: View {
 
             ForEach(MemoryCategory.allCases) { category in
                 Section(category.name) {
-                    let items = store.state.memories.filter { $0.category == category }
+                    let items = store.memories.filter { $0.category == category }
                     if items.isEmpty {
                         Text("Nada todavía.")
                             .foregroundStyle(Palette.ink3)
@@ -747,7 +880,7 @@ struct MemorySettings: View {
                     Text("Olvidar todo")
                         .foregroundStyle(Palette.redText)
                 }
-                .disabled(store.state.memories.isEmpty)
+                .disabled(store.memories.isEmpty)
             } footer: {
                 Text("Toca un recuerdo para editarlo o deslízalo para olvidarlo.")
             }
@@ -794,7 +927,7 @@ struct ConnectorsSettings: View {
                                 .foregroundStyle(Palette.ink3)
                         }
                         Spacer(minLength: 8)
-                        Button(store.state.connectors.contains(kind) ? "Desconectar" : "Conectar") {
+                        Button(store.connectors.contains(kind) ? "Desconectar" : "Conectar") {
                             store.toggleConnector(kind)
                         }
                         .buttonStyle(.bordered)
@@ -806,7 +939,7 @@ struct ConnectorsSettings: View {
             }
 
             Section {
-                ForEach(store.state.customConnectors) { connector in
+                ForEach(store.customConnectors) { connector in
                     VStack(alignment: .leading, spacing: 2) {
                         Text(connector.name)
                             .foregroundStyle(Palette.ink)
@@ -847,194 +980,121 @@ struct ConnectorsSettings: View {
     }
 }
 
-// MARK: - Payment
+// MARK: - Choose how to pay
 
-struct PaymentSheet: View {
+/// Pay the chosen plan with Apple (App Store subscription) or on the web
+/// (Pago Móvil, USDT, USDC or card), which opens in Safari with this account.
+struct CheckoutSheet: View {
     @Environment(AppStore.self) private var store
+    @Environment(Purchases.self) private var purchases
     @Environment(\.dismiss) private var dismiss
-    @State private var method: PayMethod = .pagoMovil
-    @State private var region = "VE"
-    @State private var network: Network = .tron
-    @State private var reference = ""
-    @State private var bank = "Banco de Venezuela"
-    @State private var hash = ""
-
-    private let banks = ["Banco de Venezuela", "Banesco", "Mercantil", "BBVA Provincial", "BNC", "Bancamiga",
-                         "Banco del Tesoro", "Bicentenario", "Banplus", "Otro"]
+    @Environment(\.openURL) private var openURL
+    @Environment(\.purchase) private var purchase
 
     var body: some View {
+        let plan = store.prefs.plan
+        let annual = store.isAnnual
         NavigationStack {
             Form {
                 Section {
-                    Picker("País o región", selection: $region) {
-                        ForEach(Region.all) { country in
-                            Text(country.name).tag(country.code)
-                        }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Plan \(store.planLabel.lowercased())")
+                            .font(.k(.headline))
+                            .foregroundStyle(Palette.ink)
+                        Text("\(Fmt.money(store.planPrice)) \(annual ? "al año" : plan.unit) · IVA incluido")
+                            .font(.k(.subheadline))
+                            .foregroundStyle(Palette.ink3)
                     }
-                    Picker("Método", selection: $method) {
-                        ForEach(Region.methods(for: region)) { method in
-                            Text(method.name).tag(method)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                } footer: {
-                    Text(store.state.prefs.region == nil ? "Lo elegimos por tu zona horaria. Cámbialo si no es tu país." : "Los métodos de pago cambian según el país.")
+                    .padding(.vertical, 4)
                 }
-                switch method {
-                case .pagoMovil: pagoMovil
-                case .usdt, .usdc: crypto
-                case .card: card
+
+                Section {
+                    Button {
+                        Task { await payWithApple(plan, annual: annual) }
+                    } label: {
+                        HStack {
+                            Label("Pagar con Apple", systemImage: "bag")
+                                .fontWeight(.semibold)
+                                .foregroundStyle(Palette.ink)
+                            Spacer()
+                            if purchases.busy {
+                                ProgressView()
+                            } else if let price = purchases.displayPrice(plan, annual: annual) {
+                                Text(price)
+                                    .monospacedDigit()
+                                    .foregroundStyle(Palette.ink3)
+                            }
+                        }
+                    }
+                    .disabled(purchases.busy)
+                } footer: {
+                    Text("Se cobra a tu cuenta de Apple y se renueva sola. La cancelas cuando quieras en Ajustes del iPhone › tu nombre › Suscripciones.")
+                }
+
+                if store.showsWebPay {
+                    Section {
+                        Button {
+                            if let url = store.webPayURL(plan: plan, annual: annual) {
+                                openURL(url)
+                                dismiss()
+                            } else {
+                                store.show("Falta la dirección de la app web en Administración.")
+                            }
+                        } label: {
+                            HStack {
+                                Label {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("Pagar en la web")
+                                            .fontWeight(.semibold)
+                                            .foregroundStyle(Palette.ink)
+                                        Text("Pago Móvil, USDT, USDC o tarjeta")
+                                            .font(.k(.caption))
+                                            .foregroundStyle(Palette.ink3)
+                                    }
+                                } icon: {
+                                    Image(systemName: "safari")
+                                }
+                                Spacer()
+                                Image(systemName: "arrow.up.right")
+                                    .font(.k(.caption))
+                                    .foregroundStyle(Palette.ink3)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                    } footer: {
+                        Text("Se abre Kuolki en Safari con tu cuenta y este plan. Pago Móvil en bolívares a la tasa oficial del euro del BCV. Tu plan se activa cuando confirmamos el pago.")
+                    }
+                }
+
+                Section {
+                    Button("Restaurar compras de Apple") {
+                        Task { await purchases.restore() }
+                    }
+                    .disabled(purchases.busy)
                 }
             }
             .liminalList()
-            .navigationTitle("Pagar tu plan")
+            .navigationTitle("Elige cómo pagar")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cerrar") { dismiss() }
                 }
             }
-            .onChange(of: method) { _, newMethod in
-                if let first = newMethod.networks.first { network = first }
-            }
-            .onAppear {
-                region = store.paymentRegion
-                method = Region.methods(for: region)[0]
-            }
-            .onChange(of: region) { _, newRegion in
-                if newRegion != store.paymentRegion { store.state.prefs.region = newRegion }
-                let allowed = Region.methods(for: newRegion)
-                if !allowed.contains(method) { method = allowed[0] }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var pagoMovil: some View {
-        let pay = store.state.pay
-        Section {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Monto a pagar")
-                    .font(.k(.caption))
-                    .foregroundStyle(Palette.ink3)
-                Text(Fmt.bolivares(store.amountInBolivares))
-                    .font(.k(.title2).weight(.semibold))
-                    .monospacedDigit()
-                Text("\(Fmt.money(store.planPrice)) × \(Fmt.bolivares(pay.rate)) · tasa oficial del \(pay.useEuroRate ? "euro" : "dólar") (BCV) del \(Fmt.day(pay.rateDate))")
-                    .font(.k(.caption))
-                    .foregroundStyle(Palette.ink3)
-            }
-            .padding(.vertical, 4)
-        }
-        Section("Datos para el Pago Móvil") {
-            copyRow("Banco", pay.mobileBank, copy: false)
-            copyRow("Teléfono", pay.mobilePhone)
-            copyRow("RIF o cédula", pay.mobileID)
-            copyRow("Monto exacto", Fmt.decimal2(store.amountInBolivares))
-        }
-        Section {
-            TextField("Número de referencia", text: $reference)
-                .keyboardType(.numberPad)
-            Picker("Banco desde el que pagaste", selection: $bank) {
-                ForEach(banks, id: \.self) { bank in
-                    Text(bank).tag(bank)
+            .task { await purchases.load() }
+            .onChange(of: purchases.message) { _, text in
+                if let text {
+                    store.show(text)
+                    purchases.message = nil
                 }
             }
-            Button("Enviar comprobante") {
-                if store.submitPagoMovil(reference: reference, bank: bank) { dismiss() }
-            }
-            .fontWeight(.semibold)
-        } footer: {
-            Text("Lo verificamos en minutos y activamos tu plan.")
         }
     }
 
-    @ViewBuilder
-    private var crypto: some View {
-        let coin = method.name
-        let address = store.state.pay.wallet(for: network)
-        Section {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Monto exacto")
-                    .font(.k(.caption))
-                    .foregroundStyle(Palette.ink3)
-                Text("\(Fmt.decimal2(store.planPrice)) \(coin)")
-                    .font(.k(.title2).weight(.semibold))
-                    .monospacedDigit()
-            }
-            .padding(.vertical, 4)
-            Picker("Red", selection: $network) {
-                ForEach(method.networks) { network in
-                    Text(network.name).tag(network)
-                }
-            }
-            .pickerStyle(.segmented)
-        }
-        Section {
-            copyRow("Dirección \(coin) en \(network.name)", address.isEmpty ? "Configúrala en Administración › Planes" : address,
-                    copy: !address.isEmpty)
-            NoticeView(level: .warn, text: "Envía solo \(coin) por la red \(network.name). Si usas otra red o moneda, el pago se pierde.")
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-        }
-        Section {
-            TextField("Código de la transacción (opcional)", text: $hash)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-            Button("Ya envié el pago") {
-                store.submitCrypto(coin: coin, network: network, hash: hash)
-                dismiss()
-            }
-            .fontWeight(.semibold)
-        }
-    }
-
-    @ViewBuilder
-    private var card: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Total")
-                    .font(.k(.caption))
-                    .foregroundStyle(Palette.ink3)
-                Text(Fmt.money(store.planPrice))
-                    .font(.k(.title2).weight(.semibold))
-                Text("Débito o crédito, nacional o internacional")
-                    .font(.k(.caption))
-                    .foregroundStyle(Palette.ink3)
-            }
-            .padding(.vertical, 4)
-        }
-        Section {
-            Button {
-                store.show("Demostración: aquí se abre la página segura del procesador de pagos.")
-            } label: {
-                Label("Pagar \(Fmt.money(store.planPrice)) con tarjeta", systemImage: "creditcard")
-                    .fontWeight(.semibold)
-            }
-        } footer: {
-            Text("Te llevamos a la página segura del procesador de pagos. Kuolki nunca ve ni guarda los datos de tu tarjeta.")
-        }
-    }
-
-    private func copyRow(_ title: String, _ value: String, copy: Bool = true) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.k(.caption))
-                    .foregroundStyle(Palette.ink3)
-                Text(value)
-                    .foregroundStyle(Palette.ink)
-                    .monospacedDigit()
-                    .textSelection(.enabled)
-            }
-            Spacer(minLength: 8)
-            if copy {
-                Button("Copiar") {
-                    UIPasteboard.general.string = value
-                    store.show("Copiado")
-                }
-                .buttonStyle(.borderless)
-            }
+    private func payWithApple(_ plan: PlanKind, annual: Bool) async {
+        if await purchases.buy(plan, annual: annual, account: store.appAccountToken, using: purchase) {
+            store.show("Listo: tu plan \(store.planLabel.lowercased()) quedó activo.")
+            dismiss()
         }
     }
 }

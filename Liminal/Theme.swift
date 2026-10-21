@@ -107,9 +107,9 @@ extension ThemeChoice {
 extension FontScale {
     var dynamicTypeSize: DynamicTypeSize {
         switch self {
-        case .pequena: return .medium
+        case .pequena: return .small
         case .normal: return .large
-        case .grande: return .xLarge
+        case .grande: return .xxLarge
         }
     }
 }
